@@ -1,0 +1,150 @@
+#!/usr/bin/php
+<?php
+
+/*
+ * The MIT License
+ *
+ * Copyright 2021 Austrian Centre for Digital Humanities.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#use RuntimeException;
+
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\SearchTerm;
+use acdhOeaw\arche\lib\SearchConfig;
+use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\arche\lib\RepoResourceInterface;
+use zozlak\RdfConstants as RDF;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Exception\ClientException;
+use EasyRdf\Graph;
+use EasyRdf\Resource;
+use EasyRdf\Literal;
+use acdhOeaw\UriNormalizer;
+
+require_once 'vendor/autoload.php';
+
+$cfg        = json_decode(json_encode(yaml_parse_file($argv[1] ?? 'config.yaml')));
+$opts       = [
+    'auth' => [$cfg->auth->user, $cfg->auth->password],
+];
+$repo       = Repo::factoryFromUrl($cfg->repositoryUrl, $opts);
+$schema     = $repo->getSchema();
+$client     = new Client(['http_errors' => false]);
+$normalizer = UriNormalizer::factory();
+foreach ($cfg->classes as $class => $cCfg) {
+    echo "### Processing resources of class $class\n\n";
+    foreach ($cCfg as $mCfg) {
+        $st1              = new SearchTerm(RDF::RDF_TYPE, $class);
+        $st2              = new SearchTerm($schema->id, $mCfg->match, '~');
+        $sc               = new SearchConfig();
+        $sc->metadataMode = RepoResourceInterface::META_RESOURCE;
+        $sc->limit        = 1;
+        foreach ($repo->getResourcesBySearchTerms([$st1, $st2], $sc) as $N => $repoRes) {
+            $meta      = $repoRes->getGraph();
+            $newValues = [];
+            foreach ($meta->allResources($schema->id) as $id) {
+                $id = (string) $id;
+                if (!preg_match("`$mCfg->match`", $id)) {
+                    continue;
+                }
+                $url      = str_replace('%id%', $id, $mCfg->resolve);
+                $response = $client->send(new Request('get', $url));
+                if ($response->getStatusCode() !== 200) {
+                    echo "Failed to load data from $url\n";
+                    continue;
+                }
+                $graph   = new Graph();
+                $graph->parse((string) $response->getBody(), $mCfg->format);
+                $refMeta = $graph->resource($id);
+                if (count($refMeta->propertyUris()) === 0) {
+                    echo "Fetched data doesn't contain the $id resource\n";
+                    continue;
+                }
+                foreach ($mCfg->mapping as $pCfg) {
+                    if (!isset($newValues[$pCfg->property])) {
+                        $newValues[$pCfg->property] = [];
+                    }
+                    $values = resolve($refMeta, $pCfg->path);
+                    foreach ($values as $i) {
+                        $lang = '_';
+                        switch ($pCfg->type) {
+                            case 'id':
+                                $i    = $normalizer->normalize((string) $i);
+                                break;
+                            case 'literal':
+                                $lang = $pCfg->lang ?? (string) ($i instanceof Literal ? $i->getLang() : '');
+                                break;
+                            case 'resource':
+                                break;
+                            default:
+                                throw new RuntimeException("Unknown property type $pCfg->type");
+                        }
+                        if (!isset($newValues[$pCfg->property][$lang])) {
+                            $newValues[$pCfg->property][$lang] = [];
+                        }
+                        $maxCountCond = count($newValues[$pCfg->property][$lang]) < ($pCfg->maxPerLang ?? PHP_INT_MAX);
+                        $langReqCond  = !empty($lang) || !($pCfg->langRequired ?? false);
+                        if ($maxCountCond && $langReqCond) {
+                            $newValues[$pCfg->property][$lang][] = (string) $i;
+                        }
+                    }
+                }
+            }
+            $newMeta = (new Graph())->resource($repoRes->getUri());
+            foreach ($newValues as $prop => $langs) {
+                foreach ($langs as $lang => $values) {
+                    foreach ($values as $n => $value) {
+                        if ($lang === '_') {
+                            $newMeta->addResource($prop, $value);
+                        } else {
+                            $newMeta->addLiteral($prop, $value, empty($lang) ? null : $lang);
+                        }
+                    }
+                }
+            }
+            $N  = $N + 1;
+            $NN = round(100 * $N / $sc->count);
+            echo "Updating repository resource " . $repoRes->getUri() . " ($N/$sc->count $NN%) with:\n" . $newMeta->dump('text');
+            try {
+                $repo->begin();
+                $repoRes->setMetadata($newMeta);
+                $repoRes->updateMetadata(RepoResource::UPDATE_MERGE);
+                $repo->commit();
+            } catch (ClientException $ex) {
+                echo "ERROR: " . (string) $ex->getResponse()->getBody() . "\n";
+            }
+        }
+    }
+}
+
+function resolve(Resource $meta, array $path): array {
+    if (count($path) < 2) {
+        return $meta->all($path[0]);
+    }
+    $prop   = array_shift($path);
+    $values = [];
+    foreach ($meta->allResources($prop) as $res) {
+        $values = array_merge($values, resolve($res, $path));
+    }
+    return $values;
+}

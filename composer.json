@@ -1,0 +1,39 @@
+{
+    "name": "acdh-oeaw/arche-ref-sources",
+    "type": "library",
+    "description": "Library for fetching data from external reference sources",
+    "keywords": [],
+    "homepage": "https://github.com/acdh-oeaw/arche-ref-sources",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mateusz Żółtak",
+            "email": "mzoltak@oeaw.ac.at"
+        }
+    ],
+    "require": {
+        "php": ">=8",
+        "guzzlehttp/guzzle": "^7 | ^6",
+        "acdh-oeaw/arche-lib": "*",
+        "psr/log": "*",
+        "acdh-oeaw/arche-assets": "^3.2",
+        "acdh-oeaw/uri-normalizer": "^1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "acdhOeaw\\": "src/acdhOeaw"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "*",
+        "phpstan/phpstan": "*"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "acdhOeaw\\arche\\lib\\tests\\": "tests"
+        }
+    },
+    "bin": [
+        "arche-ref-sources"
+    ]
+}
