@@ -8,8 +8,16 @@ It works be resolving existing identifiers being external reference source URIs,
 
 * clone this repo and enter its directory
 * run `composer update`
-* run `php -f arche-ref-sources pathToConfigFile.yaml`
 
 # Configuration
 
 See the `config-sample.yaml`.
+
+# Running
+
+In the repository directory:
+
+* Run `php -f arche-ref-sources --help` and go trough the available options.
+* Prepare the configuration file. You may use `config-sample.yaml` as a base.
+* Run `php -f arche-ref-sources {all the parameters you may want} pathToConfigFile.yaml`.
+

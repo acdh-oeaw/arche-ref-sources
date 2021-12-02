@@ -43,17 +43,31 @@ use acdhOeaw\UriNormalizer;
 
 require_once 'vendor/autoload.php';
 
+const MODE_RESOLVE = 1;
+const MODE_PARSE = 2;
+const MODE_TEST = 3;
+const MODE_UPDATE = 4;
+
+$modes = [
+    'resolve' => MODE_RESOLVE,
+    'parse'   => MODE_PARSE,
+    'test'    => MODE_TEST,
+    'update'  => MODE_UPDATE,
+];
+
 // Parameters parsing
 $param = [
-    'help'        => false,
-    'limit'       => PHP_INT_MAX,
-    'test'        => false,
-    'onlyResolve' => false,
-    'user'        => '',
-    'pswd'        => '',
-    'repoUrl'     => '',
-    'verbose'     => false,
-    0             => 'config.yaml',
+    'help'    => false,
+    'limit'   => PHP_INT_MAX,
+    'mode'    => 'parse',
+    'user'    => '',
+    'pswd'    => '',
+    'repoUrl' => '',
+    'verbose' => false,
+    'after'   => '',
+    'id'      => '',
+    'output'  => '',
+    0         => 'config.yaml',
 ];
 $n     = 0;
 for ($i = 1; $i < count($argv); $i++) {
@@ -78,8 +92,29 @@ for ($i = 1; $i < count($argv); $i++) {
     }
 }
 if ($param['help']) {
-    exit($argv[0] . " [--help] [--limit N] [--repoUrl repoApiBaseUrl] [--user archeUser] [--pswd archePassword] [--onlyResolve] [--test] [--verbose] cfgFilePath\n");
+    echo $argv[0] . " [--help] [--limit N] [--after date] [--id uri] [--repoUrl repoApiBaseUrl] [--user archeUser] [--pswd archePassword] [--mode resolve/parse/test/update] [--verbose] [--output pathToOutputFile] cfgFilePath\n";
+    echo "\n";
+    echo "Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\n";
+    echo "Which resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.\n";
+    echo "\n";
+    echo "--limit N - limit number of processed resources\n";
+    echo "--after date - process only resources modified after a given date\n";
+    echo "--id uri - process only repository resource with a given id\n";
+    echo "--repoUrl - use a given repository instance (overwrites the `repositoryUrl` property read from the config file)\n";
+    echo "--user archeUser - user name used for repository authentication (not important if --test or --resolveOnly are used)\n";
+    echo "--pswd archePassword - password used for repository authentication (not important if --test or --resolveOnly are used)\n";
+    echo "--mode resolve/parse/test/update - operation mode\n";
+    echo "    - resolve - only try to resolve the external URI (finds broken external URIs)\n";
+    echo "    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n";
+    echo "    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n";
+    echo "    - update - updates the repository resource with data fetched from the external source\n";
+    echo "--verbose - provide more verbose output, especially print the data fetched from the external reference source\n";
+    echo "--output pathToOutputFile - when used, the data to be saved to the repository are also saved in a TTL file\n";
+    echo "cfgFilePath - path to the configuration file\n";
+    echo "\n";
+    exit();
 }
+$param['mode'] = $modes[$param['mode']] ?? MODE_PARSE;
 if (!file_exists($param[0])) {
     exit("Configuration file $param[0] doesn't exist\n");
 }
@@ -98,24 +133,33 @@ if (!empty($param['repoUrl']) || !isset($cfg->repositoryUrl)) {
 }
 
 // Helper objects initialization
-$client     = new Client(['http_errors' => false]);
-$opts       = [
+$client      = new Client(['http_errors' => false]);
+$opts        = [
     'auth' => [$cfg->auth->user, $cfg->auth->password],
 ];
-$repo       = Repo::factoryFromUrl($cfg->repositoryUrl, $opts);
-$schema     = $repo->getSchema();
-$normalizer = UriNormalizer::factory();
+$repo        = Repo::factoryFromUrl($cfg->repositoryUrl, $opts);
+$schema      = $repo->getSchema();
+$normalizer  = UriNormalizer::factory();
+$outputGraph = new Graph();
 
 // Do the job
 foreach ($cfg->classes as $class => $cCfg) {
     echo "### Processing resources of class $class\n\n";
     foreach ($cCfg as $mCfg) {
-        $st1              = new SearchTerm(RDF::RDF_TYPE, $class);
-        $st2              = new SearchTerm($schema->id, $mCfg->match, '~');
+        $st   = [];
+        $st[] = new SearchTerm(RDF::RDF_TYPE, $class);
+        if (!empty($param['id'])) {
+            $st[] = new SearchTerm($schema->id, $param['id']);
+        } else {
+            $st[] = new SearchTerm($schema->id, $mCfg->match, '~');
+        }
+        if (!empty($param['after'])) {
+            $st[] = new SearchTerm($schema->modificationDate, $param['after'], '>=', SearchTerm::TYPE_DATETIME);
+        }
         $sc               = new SearchConfig();
         $sc->limit        = $param['limit'];
         $sc->metadataMode = RepoResourceInterface::META_RESOURCE;
-        foreach ($repo->getResourcesBySearchTerms([$st1, $st2], $sc) as $N => $repoRes) {
+        foreach ($repo->getResourcesBySearchTerms($st, $sc) as $N => $repoRes) {
             $N  = $N + 1;
             $NN = round(100 * $N / $sc->count);
             echo "Resource " . $repoRes->getUri() . " ($N/$sc->count $NN%)\n";
@@ -140,7 +184,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                     echo "ERROR: Data fetched from $url doesn't contain the $id resource\n";
                     continue;
                 }
-                if ($param['onlyResolve']) {
+                if ($param['mode'] <= MODE_RESOLVE) {
                     continue;
                 }
 
@@ -174,7 +218,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                     }
                 }
             }
-            if ($param['onlyResolve']) {
+            if ($param['mode'] <= MODE_RESOLVE) {
                 continue;
             }
 
@@ -191,11 +235,17 @@ foreach ($cfg->classes as $class => $cCfg) {
                 }
             }
             echo $param['verbose'] ? $newMeta->dump('text') : '';
+            if (!empty($param['output'])) {
+                $newMeta->copy([], '/^$/', '', $outputGraph);
+            }
+            if ($param['mode'] <= MODE_PARSE) {
+                continue;
+            }
             try {
                 $repo->begin();
                 $repoRes->setMetadata($newMeta);
                 $repoRes->updateMetadata(RepoResource::UPDATE_MERGE);
-                if ($param['test']) {
+                if ($param['mode'] <= MODE_TEST) {
                     $repo->rollback();
                 } else {
                     $repo->commit();
@@ -205,6 +255,9 @@ foreach ($cfg->classes as $class => $cCfg) {
             }
         }
     }
+}
+if (!empty($param['output'])) {
+    file_put_contents($param['output'], $outputGraph->serialise('text/turtle'));
 }
 
 function resolve(Resource $meta, array $path): array {
