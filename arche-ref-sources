@@ -41,7 +41,7 @@ use EasyRdf\Resource;
 use EasyRdf\Literal;
 use acdhOeaw\UriNormalizer;
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 const MODE_RESOLVE = 1;
 const MODE_PARSE = 2;
@@ -75,7 +75,9 @@ for ($i = 1; $i < count($argv); $i++) {
     $p = str_starts_with($v, '--');
     $v = $p ? substr($v, 2) : $v;
     if ($p && !isset($param[$v]) || $v === 'help' || !$p && !isset($param[$n])) {
-        echo "Unknonwn parameter " . ($p ? $v : $n) . "\n";
+        if ($v !== 'help') {
+            echo "Unknonwn parameter " . ($p ? $v : $n) . "\n";
+        }
         $param['help'] = true;
         break;
     }
@@ -92,7 +94,7 @@ for ($i = 1; $i < count($argv); $i++) {
     }
 }
 if ($param['help']) {
-    echo $argv[0] . " [--help] [--limit N] [--after date] [--id uri] [--repoUrl repoApiBaseUrl] [--user archeUser] [--pswd archePassword] [--mode resolve/parse/test/update] [--verbose] [--output pathToOutputFile] cfgFilePath\n";
+    echo "\n" . $argv[0] . " [--help] [--limit N] [--after date] [--id uri] [--repoUrl repoApiBaseUrl] [--user archeUser] [--pswd archePassword] [--mode resolve/parse/test/update] [--verbose] [--output pathToOutputFile] cfgFilePath\n";
     echo "\n";
     echo "Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\n";
     echo "Which resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.\n";
