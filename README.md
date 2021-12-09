@@ -33,8 +33,10 @@ The script is already installed on repo-ingestion@hephaistos.arz.oeaw.ac.at
 * ssh to repo-ingestion@hephaistos
 * run `./login.sh`
 * run `/ARCHE/ref-sources/arche-ref-sources {parameters} {pathToConfigFile}` and replace the part in `{}` with your choice of parameters
-  * example 1 `/ARCHE/ref-sources/arche-ref-sources --mode parse --verbose --output /ARCHE/staging/arche-production-clean-up_Kiki/enrich.ttl --after 2021-12-01 /ARCHE/ref-sources/config-sample.yaml 2>&1 | tee /ARCHE/staging/arche-production-clean-up_Kiki/enrich.log`
-  * example 2 `/ARCHE/ref-sources/arche-ref-sources --mode test --verbose --output /ARCHE/staging/arche-production-clean-up_Kiki/enrich.ttl /ARCHE/ref-sources/config-sample.yaml 2>&1 | tee /ARCHE/staging/arche-production-clean-up_Kiki/enrich.log` 
+  * example 1: fetch data without changing what is there for resources modified after 01.12.2021, output on console what has been fetched and also write this output to a file: 
+     * `/ARCHE/ref-sources/arche-ref-sources --mode parse --verbose --output /ARCHE/staging/enrichment/outputEnrich.ttl --after 2021-12-01 /ARCHE/ref-sources/config-sample.yaml`
+  * example 2, not for the faint of heart: fetch data and change on instance, but immediately revert changes; also output on console what has been fetched and  write this output to a file as well: 
+     * `/ARCHE/ref-sources/arche-ref-sources --mode test --verbose --output /ARCHE/staging/enrichment/outputEnrich.ttl /ARCHE/ref-sources/config-sample.yaml` 
 
 
 
