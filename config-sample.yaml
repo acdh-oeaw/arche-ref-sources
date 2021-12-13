@@ -1,17 +1,42 @@
+# ARCHE repository base URL
 repositoryUrl: https://arche.acdh.oeaw.ac.at/api
+# ARCHE credentials.
+# Required only if you update repository resources (run in the "update" mode)
 auth:
   user: foo
   password: bar
+# Which resource classes to process and how to do it
 classes:
+  # Class URI as the key
+  # Value is an array of external reference source definitions for a given class
   https://vocabs.acdh.oeaw.ac.at/schema#Person:
+      # Only resources with identifiers matching the "match" regexp are resolved
+      # against the given external reference source
     - match: ^https://d-nb.info/gnd
+      # External reference source URL template
+      # (%id% is substituted with the ARCHE resource identifier witch matched the "match" regexp)
       resolve: "%id%/about/lds.ttl"
+      # (optional) The expected RDF format delivered by the external reference source
       format: text/turtle
+      # Mapping of the RDF provided by the external reference source to the ARCHE schema
       mapping:
+          # ARCHE schema property
         - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+          # ARCHE schema property type: id, literal or resource
           type: id
+          # Path of RDF properties leading to the given property in the RDF metadata
+          # provided by the external reference source.
+          # In the simple case (like here) just an equivalent property in the external reference source.
           path:
             - http://www.w3.org/2002/07/owl#sameAs
+          # (optional) Only values matching given regexp will be included.
+          # Can be used e.g. to allow only identifiers in allowed namespaces (like here).
+          # (if "match" is provided, both conditions must be fulfilled)
+          match: viaf.org|wikidata.org|d-nb.info
+          # (optional) Only values which don't match given regexp will be included.
+          # Can be used e.g. to skip identifiers in namespaces we don't trust (like here).
+          # (if "match" is provided, both conditions must be fulfilled)
+          skip: isni.org|id.loc.gov.pl
         - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
           type: literal
           lang: und

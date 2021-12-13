@@ -18,7 +18,7 @@ See the `config-sample.yaml` for an example.
 In the repository directory:
 
 * Run `php -f arche-ref-sources --help` and go trough the available options.
-* Prepare the configuration file. You may use `config-sample.yaml` as a base.
+* Prepare the configuration file. You may use `config-sample.yaml` as a base (it contains useful comments).
 * Run `php -f arche-ref-sources {all the parameters you may want} pathToConfigFile.yaml`
   * For starters you will probably want to stick to the default `parse` mode (only fetch data from the external source but don't try to update ARCHE) with `--verbose` (to see what has been fetched and extracted) and maybe `--output` (so what has been fetched and extracted is saved in a TTL file you can use later on)
   * For filtering resources you can use `--id` (process exactly one resource with a given id; id namespace doesn't count), `--after someDate` (process only resources modified afer a given date) and maybe `--limit N` (process only number of N resources)

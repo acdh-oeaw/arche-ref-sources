@@ -211,6 +211,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                         $newValues[$pCfg->property] = [];
                     }
                     $values = resolve($refMeta, $pCfg->path);
+                    $values = filter($values, $pCfg->match ?? null, $pCfg->skip ?? null);
                     foreach ($values as $i) {
                         $lang = '_';
                         switch ($pCfg->type) {
@@ -288,4 +289,18 @@ function resolve(Resource $meta, array $path): array {
         $values = array_merge($values, resolve($res, $path));
     }
     return $values;
+}
+
+function filter(array $values, ?string $match, ?string $skip): array {
+    if (empty($match) && empty($skip)) {
+        return $values;
+    }
+    $filtered = [];
+    $skip     = empty($skip) ? '^$' : $skip;
+    foreach ($values as $i) {
+        if (preg_match("`$match`", (string) $i) && !preg_match("`$skip`", (string) $i)) {
+            $filtered[] = $i;
+        }
+    }
+    return $filtered;
 }
