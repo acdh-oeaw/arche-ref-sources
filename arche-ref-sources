@@ -135,7 +135,10 @@ if (!empty($param['repoUrl']) || !isset($cfg->repositoryUrl)) {
 }
 
 // Helper objects initialization
-$client      = new Client(['http_errors' => false]);
+$client      = new Client([
+    'http_errors'     => false,
+    'allow_redirects' => ['track_redirects' => true],
+    ]);
 $opts        = [
     'auth' => [$cfg->auth->user, $cfg->auth->password],
 ];
@@ -182,6 +185,19 @@ foreach ($cfg->classes as $class => $cCfg) {
                 $graph   = new Graph();
                 $graph->parse((string) $response->getBody(), $mCfg->format);
                 $refMeta = $graph->resource($id);
+
+                // if there were redirects try to adjust the id based on redirect URLs
+                if (count($refMeta->propertyUris()) === 0) {
+                    $redirectUrl = $response->getHeader('X-Guzzle-Redirect-History');
+                    $redirectUrl = array_pop($redirectUrl);
+                    $matchRegex  = "`" . str_replace('%id%', '(.*)', $mCfg->resolve) . "`";
+                    $matches     = null;
+                    preg_match($matchRegex, $redirectUrl, $matches);
+                    if (count($matches) >= 2) {
+                        $refMeta = $graph->resource($matches[1]);
+                    }
+                }
+
                 if (count($refMeta->propertyUris()) === 0) {
                     echo "ERROR: Data fetched from $url doesn't contain the $id resource\n";
                     continue;
