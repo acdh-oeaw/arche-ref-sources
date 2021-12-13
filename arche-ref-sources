@@ -61,7 +61,7 @@ $param = [
     'user'    => '',
     'pswd'    => '',
     'repoUrl' => '',
-    'input'   => '',
+    'inputFile'   => '',
     'idProp'  => '',
     'verbose' => false,
     'after'   => '',
@@ -103,8 +103,8 @@ if ($param['help']) {
     echo "--after date - process only resources modified after a given date\n";
     echo "--id uri - process only repository resource with a given id\n";
     echo "--repoUrl - use a given repository instance (overwrites the `repositoryUrl` property read from the config file)\n";
-    echo "--input - read resources from a given RDF file instead of the ARCHE repository\n";
-    echo "--idProp - (needed only when --input is used and ARCHE repository URL is unknown) RDF property storing resource identifiers.\n";
+    echo "--inputFile - read resources from a given RDF file instead of the ARCHE repository\n";
+    echo "--idProp - (needed only when --inputFile is used and ARCHE repository URL is unknown) RDF property storing resource identifiers.\n";
     echo "--user archeUser - user name used for repository authentication (not important if --test or --resolveOnly are used)\n";
     echo "--pswd archePassword - password used for repository authentication (not important if --test or --resolveOnly are used)\n";
     echo "--mode resolve/parse/test/update - operation mode\n";
@@ -144,10 +144,10 @@ $client      = new Client([
     'http_errors'     => false,
     'allow_redirects' => ['track_redirects' => true]
     ]);
-if (!empty($param['input'])) {
+if (!empty($param['inputFile'])) {
     $schema = ['id' => $param['idProp']];
     $schema = new Schema((object) $schema);
-    $source = new NamedEntityIteratorFile($param['input'], $cfg->repositoryUrl, $schema, $cfg->auth->user, $cfg->auth->password);
+    $source = new NamedEntityIteratorFile($param['inputFile'], $cfg->repositoryUrl, $schema, $cfg->auth->user, $cfg->auth->password);
 } else {
     $source = new NamedEntityIteratorRepo($cfg->repositoryUrl, $cfg->auth->user, $cfg->auth->password);
 }

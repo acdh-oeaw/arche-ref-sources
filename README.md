@@ -23,6 +23,7 @@ In the repository directory:
   * For starters you will probably want to stick to the default `parse` mode (only fetch data from the external source but don't try to update ARCHE) with `--verbose` (to see what has been fetched and extracted) and maybe `--output` (so what has been fetched and extracted is saved in a TTL file you can use later on)
   * For filtering resources you can use `--id` (process exactly one resource with a given id; id namespace doesn't count), `--after someDate` (process only resources modified afer a given date) and maybe `--limit N` (process only number of N resources)
   * You can choose the ARCHE instance by providing the `--repoUrl` (the default is apollo, for minerva you should use `--repoUrl https://arche-dev.acdh-dev.oeaw.ac.at/api`)
+  * You can also read data from an RDF file instead of an ARCHE repository using the `--inputFile` parameter.
 
 ---
 
