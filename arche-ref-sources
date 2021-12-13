@@ -27,12 +27,6 @@
 
 #use RuntimeException;
 
-use acdhOeaw\arche\lib\Repo;
-use acdhOeaw\arche\lib\SearchTerm;
-use acdhOeaw\arche\lib\SearchConfig;
-use acdhOeaw\arche\lib\RepoResource;
-use acdhOeaw\arche\lib\RepoResourceInterface;
-use zozlak\RdfConstants as RDF;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Exception\ClientException;
@@ -40,6 +34,10 @@ use EasyRdf\Graph;
 use EasyRdf\Resource;
 use EasyRdf\Literal;
 use acdhOeaw\UriNormalizer;
+use acdhOeaw\arche\lib\Schema;
+use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
+use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
+use acdhOeaw\arche\refSources\NamedEntityInterface;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -63,6 +61,8 @@ $param = [
     'user'    => '',
     'pswd'    => '',
     'repoUrl' => '',
+    'input'   => '',
+    'idProp'  => '',
     'verbose' => false,
     'after'   => '',
     'id'      => '',
@@ -103,6 +103,8 @@ if ($param['help']) {
     echo "--after date - process only resources modified after a given date\n";
     echo "--id uri - process only repository resource with a given id\n";
     echo "--repoUrl - use a given repository instance (overwrites the `repositoryUrl` property read from the config file)\n";
+    echo "--input - read resources from a given RDF file instead of the ARCHE repository\n";
+    echo "--idProp - (needed only when --input is used and ARCHE repository URL is unknown) RDF property storing resource identifiers.\n";
     echo "--user archeUser - user name used for repository authentication (not important if --test or --resolveOnly are used)\n";
     echo "--pswd archePassword - password used for repository authentication (not important if --test or --resolveOnly are used)\n";
     echo "--mode resolve/parse/test/update - operation mode\n";
@@ -133,49 +135,39 @@ if (!empty($param['pswd']) || !isset($cfg->auth->password)) {
 if (!empty($param['repoUrl']) || !isset($cfg->repositoryUrl)) {
     $cfg->repositoryUrl = $param['repoUrl'];
 }
+$dateFilter = !empty($param['after']) ? $param['after'] : null;
 
 // Helper objects initialization
-$client      = new Client([
-    'http_errors'     => false,
-    'allow_redirects' => ['track_redirects' => true],
-    ]);
-$opts        = [
-    'auth' => [$cfg->auth->user, $cfg->auth->password],
-];
-$repo        = Repo::factoryFromUrl($cfg->repositoryUrl, $opts);
-$schema      = $repo->getSchema();
 $normalizer  = UriNormalizer::factory();
 $outputGraph = new Graph();
+$client      = new Client([
+    'http_errors'     => false,
+    'allow_redirects' => ['track_redirects' => true]
+    ]);
+if (!empty($param['input'])) {
+    $schema = ['id' => $param['idProp']];
+    $schema = new Schema((object) $schema);
+    $source = new NamedEntityIteratorFile($param['input'], $cfg->repositoryUrl, $schema, $cfg->auth->user, $cfg->auth->password);
+} else {
+    $source = new NamedEntityIteratorRepo($cfg->repositoryUrl, $cfg->auth->user, $cfg->auth->password);
+}
 
 // Do the job
 foreach ($cfg->classes as $class => $cCfg) {
-    echo "### Processing resources of class $class\n\n";
+    echo "\n### Processing resources of class $class\n\n";
     foreach ($cCfg as $mCfg) {
-        $st   = [];
-        $st[] = new SearchTerm(RDF::RDF_TYPE, $class);
-        if (!empty($param['id'])) {
-            $st[] = new SearchTerm($schema->id, $param['id']);
-        } else {
-            $st[] = new SearchTerm($schema->id, $mCfg->match, '~');
-        }
-        if (!empty($param['after'])) {
-            $st[] = new SearchTerm($schema->modificationDate, $param['after'], '>=', SearchTerm::TYPE_DATETIME);
-        }
-        $sc               = new SearchConfig();
-        $sc->limit        = $param['limit'];
-        $sc->metadataMode = RepoResourceInterface::META_RESOURCE;
-        foreach ($repo->getResourcesBySearchTerms($st, $sc) as $N => $repoRes) {
-            $N  = $N + 1;
-            $NN = round(100 * $N / $sc->count);
-            echo "Resource " . $repoRes->getUri() . " ($N/$sc->count $NN%)\n";
+        $idFilter = !empty($param['id']) ? "^" . $param['id'] . "$" : "$mCfg->match";
+        $source->setFilter($class, $idFilter, $dateFilter, $param['limit']);
 
-            $meta      = $repoRes->getGraph();
+        foreach ($source->getNamedEntities() as $N => $namedEntity) {
+            /* @var $namedEntity NamedEntityInterface */
+            $N  = $N + 1;
+            $T  = $source->getCount();
+            $NN = round(100 * $N / $T);
+            echo "Resource " . $namedEntity->getUri() . " ($N/$T $NN%)\n";
+
             $newValues = [];
-            foreach ($meta->allResources($schema->id) as $id) {
-                $id = (string) $id;
-                if (!preg_match("`$mCfg->match`", $id)) {
-                    continue;
-                }
+            foreach ($namedEntity->getIdentifiers($mCfg->match) as $id) {
                 $url      = str_replace('%id%', $id, $mCfg->resolve);
                 $response = $client->send(new Request('get', $url));
                 if ($response->getStatusCode() !== 200) {
@@ -241,7 +233,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                 continue;
             }
 
-            $newMeta = (new Graph())->resource($repoRes->getUri());
+            $newMeta = (new Graph())->resource($namedEntity->getUri());
             foreach ($newValues as $prop => $langs) {
                 foreach ($langs as $lang => $values) {
                     foreach ($values as $n => $value) {
@@ -261,14 +253,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                 continue;
             }
             try {
-                $repo->begin();
-                $repoRes->setMetadata($newMeta);
-                $repoRes->updateMetadata(RepoResource::UPDATE_MERGE);
-                if ($param['mode'] <= MODE_TEST) {
-                    $repo->rollback();
-                } else {
-                    $repo->commit();
-                }
+                $namedEntity->updateMetadata($newMeta, $param['mode'] <= MODE_TEST);
             } catch (ClientException $ex) {
                 echo "ERROR: " . (string) $ex->getResponse()->getBody() . "\n";
             }
