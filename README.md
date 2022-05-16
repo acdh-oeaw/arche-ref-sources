@@ -6,7 +6,7 @@ It works by resolving existing identifiers that are external reference source UR
 
 # Installation
 
-* run `composer require arche-ref-sources`
+* run `composer require acdh-oeaw/arche-ref-sources`
 
 or
 
