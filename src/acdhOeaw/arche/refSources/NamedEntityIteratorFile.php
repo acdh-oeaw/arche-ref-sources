@@ -32,6 +32,7 @@ use EasyRdf\Resource;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\UriNormalizer;
 
 /**
  * Description of NamedEntityIteratorFile
@@ -49,6 +50,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
     private ?string $minModDate = null;
     private ?int $limit      = null;
     private ?int $count;
+    private UriNormalizer $normalizer;
 
     public function __construct(string $rdfFilePath, ?string $repoUrl,
                                 ?Schema $schema = null, ?string $user = null,
@@ -66,6 +68,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
         if (empty($this->schema->id ?? null)) {
             throw new RuntimeException("Both ARCHE repo URL and id property are unknown. Please provide either --repoUrl or --idProp parameter.");
         }
+        $this->normalizer = UriNormalizer::factory($this->schema->id);
     }
 
     public function setFilter(string $class, string $idMatch,
@@ -124,6 +127,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
             return false;
         }
         foreach ($res->allResources($this->schema->id) as $id) {
+            $id = $this->normalizer->normalize((string) $id);
             if (preg_match($this->idMatch, $id)) {
                 return true;
             }
