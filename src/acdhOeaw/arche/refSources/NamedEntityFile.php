@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\refSources;
 
 use EasyRdf\Resource;
 use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\UriNormalizer;
 
 /**
  * Description of RefResourceFile
@@ -38,10 +39,12 @@ class NamedEntityFile implements NamedEntityInterface {
 
     private Resource $res;
     private NamedEntityIteratorFile $iter;
+    private UriNormalizer $normalizer;
 
     public function __construct(Resource $res, NamedEntityIteratorFile $iter) {
-        $this->res  = $res;
-        $this->iter = $iter;
+        $this->res        = $res;
+        $this->iter       = $iter;
+        $this->normalizer = UriNormalizer::factory();
     }
 
     public function getIdentifiers(string $match): array {
@@ -49,6 +52,7 @@ class NamedEntityFile implements NamedEntityInterface {
         $ids   = [];
         foreach ($this->res->allResources($this->iter->getIdProp()) as $id) {
             $id = (string) $id;
+            $id = $this->normalizer->normalize($id);
             if (preg_match($match, $id)) {
                 $ids[] = $id;
             }
