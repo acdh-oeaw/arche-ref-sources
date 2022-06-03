@@ -17,7 +17,8 @@
         "acdh-oeaw/arche-lib": "*",
         "psr/log": "*",
         "acdh-oeaw/arche-assets": "^3.2",
-        "acdh-oeaw/uri-normalizer": "^1.1"
+        "acdh-oeaw/uri-normalizer": "^1.1",
+        "zozlak/argparse": "*"
     },
     "autoload": {
         "psr-4": {

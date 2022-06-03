@@ -33,6 +33,7 @@ use GuzzleHttp\Exception\ClientException;
 use EasyRdf\Graph;
 use EasyRdf\Resource;
 use EasyRdf\Literal;
+use zozlak\argparse\ArgumentParser as AP;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
@@ -50,96 +51,44 @@ const MODE_PARSE = 2;
 const MODE_TEST = 3;
 const MODE_UPDATE = 4;
 
-$modes = [
+$modes       = [
     'resolve' => MODE_RESOLVE,
     'parse'   => MODE_PARSE,
     'test'    => MODE_TEST,
     'update'  => MODE_UPDATE,
 ];
-
-// Parameters parsing
-$param = [
-    'help'    => false,
-    'limit'   => PHP_INT_MAX,
-    'mode'    => 'parse',
-    'user'    => '',
-    'pswd'    => '',
-    'repoUrl' => '',
-    'inputFile'   => '',
-    'idProp'  => '',
-    'verbose' => false,
-    'after'   => '',
-    'id'      => '',
-    'output'  => '',
-    0         => 'config.yaml',
-];
-$n     = 0;
-for ($i = 1; $i < count($argv); $i++) {
-    $v = $argv[$i];
-    $p = str_starts_with($v, '--');
-    $v = $p ? substr($v, 2) : $v;
-    if ($p && !isset($param[$v]) || $v === 'help' || !$p && !isset($param[$n])) {
-        if ($v !== 'help') {
-            echo "Unknonwn parameter " . ($p ? $v : $n) . "\n";
-        }
-        $param['help'] = true;
-        break;
-    }
-    if ($p) {
-        if (is_bool($param[$v])) {
-            $param[$v] = true;
-        } else {
-            $param[$v] = $argv[$i + 1];
-            $i++;
-        }
-    } else {
-        $param[$n] = $v;
-        $n++;
-    }
-}
-if ($param['help']) {
-    echo "\n" . $argv[0] . " [--help] [--limit N] [--after date] [--id uri] [--repoUrl repoApiBaseUrl] [--user archeUser] [--pswd archePassword] [--mode resolve/parse/test/update] [--verbose] [--output pathToOutputFile] cfgFilePath\n";
-    echo "\n";
-    echo "Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\n";
-    echo "Which resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.\n";
-    echo "\n";
-    echo "--limit N - limit number of processed resources\n";
-    echo "--after date - process only resources modified after a given date\n";
-    echo "--id uri - process only repository resource with a given id\n";
-    echo "--repoUrl - use a given repository instance (overwrites the `repositoryUrl` property read from the config file)\n";
-    echo "--inputFile - read resources from a given RDF file instead of the ARCHE repository\n";
-    echo "--idProp - (needed only when --inputFile is used and ARCHE repository URL is unknown) RDF property storing resource identifiers.\n";
-    echo "--user archeUser - user name used for repository authentication (not important if --test or --resolveOnly are used)\n";
-    echo "--pswd archePassword - password used for repository authentication (not important if --test or --resolveOnly are used)\n";
-    echo "--mode resolve/parse/test/update - operation mode\n";
-    echo "    - resolve - only try to resolve the external URI (finds broken external URIs)\n";
-    echo "    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n";
-    echo "    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n";
-    echo "    - update - updates the repository resource with data fetched from the external source\n";
-    echo "--verbose - provide more verbose output, especially print the data fetched from the external reference source\n";
-    echo "--output pathToOutputFile - when used, the data to be saved to the repository are also saved in a TTL file\n";
-    echo "cfgFilePath - path to the configuration file\n";
-    echo "\n";
-    exit();
-}
-$param['mode'] = $modes[$param['mode']] ?? MODE_PARSE;
-if (!file_exists($param[0])) {
-    exit("Configuration file $param[0] doesn't exist\n");
+$parser      = new AP("Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\nWhich resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.");
+$parser->addArgument('--limit', type: AP::TYPE_INT, default: PHP_INT_MAX, help: 'limit number of processed resources');
+$parser->addArgument('--after', help: 'process only resources modified after a given date');
+$parser->addArgument('--id', help: 'process only repository resource with a given id');
+$parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
+$parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
+$parser->addArgument('--idProp', help: '(needed only when --inputFile is used and ARCHE repository URL is unknown) RDF property storing resource identifiers.');
+$parser->addArgument('--user', help: 'user name used for repository authentication (not important if --test or --resolveOnly are used)');
+$parser->addArgument('--pswd', help: 'password used for repository authentication (not important if --test or --resolveOnly are used)');
+$parser->addArgument('--mode', default: 'parse', choices: array_keys($modes), help: "operation mode\n    - resolve - only try to resolve the external URI (finds broken external URIs)\n    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n    - update - updates the repository resource with data fetched from the external source\n");
+$parser->addArgument('--verbose', action: AP::ACTION_STORE_TRUE, help: 'provide more verbose output, especially print the data fetched from the external reference source');
+$parser->addArgument('--output', help: 'when used, the data to be saved to the repository are also saved in a TTL file');
+$parser->addArgument('cfgFile', help: 'path to the configuration file');
+$param       = $parser->parseArgs();
+$param->mode = $modes[$param->mode];
+if (!file_exists($param->cfgFile)) {
+    exit("Configuration file " . $param->cfgFile . " doesn't exist\n");
 }
 
 // Configuration initialization
-$cfg       = json_decode(json_encode(yaml_parse_file($param[0])));
+$cfg       = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
 $cfg->auth = $cfg->auth ?? new stdClass();
-if (!empty($param['user']) || !isset($cfg->auth->user)) {
-    $cfg->auth->user = $param['user'];
+if (!empty($param->user) || !isset($cfg->auth->user)) {
+    $cfg->auth->user = $param->user;
 }
-if (!empty($param['pswd']) || !isset($cfg->auth->password)) {
-    $cfg->auth->password = $param['pswd'];
+if (!empty($param->pswd) || !isset($cfg->auth->password)) {
+    $cfg->auth->password = $param->pswd;
 }
-if (!empty($param['repoUrl']) || !isset($cfg->repositoryUrl)) {
-    $cfg->repositoryUrl = $param['repoUrl'];
+if (!empty($param->repoUrl) || !isset($cfg->repositoryUrl)) {
+    $cfg->repositoryUrl = $param->repoUrl;
 }
-$dateFilter = !empty($param['after']) ? $param['after'] : null;
+$dateFilter = !empty($param->after) ? $param->after : null;
 
 // Helper objects initialization
 $normalizer  = UriNormalizer::factory();
@@ -148,10 +97,10 @@ $client      = new Client([
     'http_errors'     => false,
     'allow_redirects' => ['track_redirects' => true]
     ]);
-if (!empty($param['inputFile'])) {
-    $schema = ['id' => $param['idProp']];
+if (!empty($param->inputFile)) {
+    $schema = ['id' => $param->idProp];
     $schema = new Schema((object) $schema);
-    $source = new NamedEntityIteratorFile($param['inputFile'], $cfg->repositoryUrl, $schema, $cfg->auth->user, $cfg->auth->password);
+    $source = new NamedEntityIteratorFile($param->inputFile, $cfg->repositoryUrl, $schema, $cfg->auth->user, $cfg->auth->password);
 } else {
     $source = new NamedEntityIteratorRepo($cfg->repositoryUrl, $cfg->auth->user, $cfg->auth->password);
 }
@@ -160,8 +109,8 @@ if (!empty($param['inputFile'])) {
 foreach ($cfg->classes as $class => $cCfg) {
     echo "\n### Processing resources of class $class\n\n";
     foreach ($cCfg as $mCfg) {
-        $idFilter = !empty($param['id']) ? "^" . $param['id'] . "$" : "$mCfg->match";
-        $source->setFilter($class, $idFilter, $dateFilter, $param['limit']);
+        $idFilter = !empty($param->id) ? "^" . $param->id . "$" : "$mCfg->match";
+        $source->setFilter($class, $idFilter, $dateFilter, $param->limit);
 
         foreach ($source->getNamedEntities() as $N => $namedEntity) {
             /* @var $namedEntity NamedEntityInterface */
@@ -171,7 +120,11 @@ foreach ($cfg->classes as $class => $cCfg) {
             echo "Resource " . $namedEntity->getUri() . " ($N/$T $NN%)\n";
 
             $newValues = [];
-            foreach ($namedEntity->getIdentifiers($mCfg->match) as $id) {
+            $ids       = $namedEntity->getIdentifiers($mCfg->match);
+            if (count($ids) === 0) {
+                echo "WARNING: no matching identifiers\n";
+            }
+            foreach ($ids as $id) {
                 $url      = str_replace('%id%', $id, $mCfg->resolve);
                 $response = $client->send(new Request('get', $url));
                 if ($response->getStatusCode() !== 200) {
@@ -198,7 +151,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                     echo "ERROR: Data fetched from $url doesn't contain the $id resource\n";
                     continue;
                 }
-                if ($param['mode'] <= MODE_RESOLVE) {
+                if ($param->mode <= MODE_RESOLVE) {
                     continue;
                 }
 
@@ -233,7 +186,7 @@ foreach ($cfg->classes as $class => $cCfg) {
                     }
                 }
             }
-            if ($param['mode'] <= MODE_RESOLVE) {
+            if ($param->mode <= MODE_RESOLVE) {
                 continue;
             }
 
@@ -249,23 +202,23 @@ foreach ($cfg->classes as $class => $cCfg) {
                     }
                 }
             }
-            echo $param['verbose'] ? $newMeta->dump('text') : '';
-            if (!empty($param['output'])) {
+            echo $param->verbose ? $newMeta->dump('text') : '';
+            if (!empty($param->output)) {
                 $newMeta->copy([], '/^$/', '', $outputGraph);
             }
-            if ($param['mode'] <= MODE_PARSE) {
+            if ($param->mode <= MODE_PARSE) {
                 continue;
             }
             try {
-                $namedEntity->updateMetadata($newMeta, $param['mode'] <= MODE_TEST);
+                $namedEntity->updateMetadata($newMeta, $param->mode <= MODE_TEST);
             } catch (ClientException $ex) {
                 echo "ERROR: " . (string) $ex->getResponse()->getBody() . "\n";
             }
         }
     }
 }
-if (!empty($param['output'])) {
-    file_put_contents($param['output'], $outputGraph->serialise('text/turtle'));
+if (!empty($param->output)) {
+    file_put_contents($param->output, $outputGraph->serialise('text/turtle'));
 }
 
 function resolve(Resource $meta, array $path): array {
