@@ -125,28 +125,12 @@ foreach ($cfg->classes as $class => $cCfg) {
                 echo "WARNING: no matching identifiers\n";
             }
             foreach ($ids as $id) {
-                $url      = str_replace('%id%', $id, $mCfg->resolve);
-                $response = $client->send(new Request('get', $url));
-                if ($response->getStatusCode() !== 200) {
+                $url     = str_replace('%id%', $id, $mCfg->resolve);
+                $refMeta = fetch($url, $id, $client, $mCfg->format);
+                if ($refMeta === null) {
                     echo "ERROR: Failed to load data from $url\n";
                     continue;
                 }
-                $graph   = new Graph();
-                $graph->parse((string) $response->getBody(), $mCfg->format);
-                $refMeta = $graph->resource($id);
-
-                // if there were redirects try to adjust the id based on redirect URLs
-                if (count($refMeta->propertyUris()) === 0) {
-                    $redirectUrl = $response->getHeader('X-Guzzle-Redirect-History');
-                    $redirectUrl = array_pop($redirectUrl);
-                    $matchRegex  = "`" . str_replace('%id%', '(.*)', $mCfg->resolve) . "`";
-                    $matches     = null;
-                    preg_match($matchRegex, $redirectUrl, $matches);
-                    if (count($matches) >= 2) {
-                        $refMeta = $graph->resource($matches[1]);
-                    }
-                }
-
                 if (count($refMeta->propertyUris()) === 0) {
                     echo "ERROR: Data fetched from $url doesn't contain the $id resource\n";
                     continue;
@@ -154,12 +138,15 @@ foreach ($cfg->classes as $class => $cCfg) {
                 if ($param->mode <= MODE_RESOLVE) {
                     continue;
                 }
+                $h = fopen('foo', 'a');
+                fwrite($h, $refMeta->dump('text'));
+                fclose($h);
 
                 foreach ($mCfg->mapping as $pCfg) {
                     if (!isset($newValues[$pCfg->property])) {
                         $newValues[$pCfg->property] = [];
                     }
-                    $values = resolve($refMeta, $pCfg->path);
+                    $values = resolve($refMeta, $pCfg->path, $client, $mCfg);
                     $values = filter($values, $pCfg->match ?? null, $pCfg->skip ?? null);
                     foreach ($values as $i) {
                         $lang = '_';
@@ -221,14 +208,49 @@ if (!empty($param->output)) {
     file_put_contents($param->output, $outputGraph->serialise('text/turtle'));
 }
 
-function resolve(Resource $meta, array $path): array {
+function fetch(string $url, string $id, Client $client, string $format): ?Resource {
+    echo "fetching $id from $url\n";
+    $response = $client->send(new Request('get', $url));
+    if ($response->getStatusCode() !== 200) {
+        return null;
+    }
+    $graph   = new Graph();
+    $graph->parse((string) $response->getBody(), $format);
+    $refMeta = $graph->resource($id);
+
+    // if there were redirects try to adjust the id based on redirect URLs
+    if (count($refMeta->propertyUris()) === 0) {
+        $redirectUrl = $response->getHeader('X-Guzzle-Redirect-History');
+        $redirectUrl = array_pop($redirectUrl);
+        $matchRegex  = "`" . str_replace('%id%', '(.*)', $mCfg->resolve) . "`";
+        $matches     = null;
+        preg_match($matchRegex, $redirectUrl, $matches);
+        if (count($matches) >= 2) {
+            $refMeta = $graph->resource($matches[1]);
+        }
+    }
+
+    return $refMeta;
+}
+
+function resolve(Resource $meta, array $path, Client $client, object $mCfg): array {
     if (count($path) < 2) {
         return $meta->all($path[0]);
     }
     $prop   = array_shift($path);
     $values = [];
     foreach ($meta->allResources($prop) as $res) {
-        $values = array_merge($values, resolve($res, $path));
+        /* @var $res \EasyRdf\Resource */
+        if (count($res->propertyUris()) === 0) {
+            $id  = $res->getUri();
+            $url = str_replace('%id%', $id, $mCfg->resolve);
+            $res = fetch($url, $id, $client, $mCfg->format);
+            if ($res !== null) {
+                $values = array_merge($values, resolve($res, $path, $client, $mCfg));
+            }
+        } else {
+            $values = array_merge($values, resolve($res, $path, $client, $mCfg));
+        }
     }
     return $values;
 }
