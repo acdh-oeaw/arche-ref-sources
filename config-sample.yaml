@@ -57,6 +57,18 @@ classes:
           path:
             - https://d-nb.info/standards/elementset/gnd#preferredNameEntityForThePerson
             - https://d-nb.info/standards/elementset/gnd#surname
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasUrl
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#homepage
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasDescription
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#biographicalOrHistoricalInformation
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#variantNameForThePerson
   https://vocabs.acdh.oeaw.ac.at/schema#Organisation:
     - match: ^https://d-nb.info/gnd
       resolve: "%id%/about/lds.ttl"
@@ -72,6 +84,23 @@ classes:
           maxPerLang: 1
           path:
             - https://d-nb.info/standards/elementset/gnd#preferredNameForTheCorporateBody
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#variantNameForTheCorporateBody
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAddress
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#placeOfBusiness
+            - https://d-nb.info/standards/elementset/gnd#preferredNameForThePlaceOrGeographicName
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasCountry
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#geographicAreaCode
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasUrl
+          type: literal
+          path:
+            - https://d-nb.info/standards/elementset/gnd#homepage
   https://vocabs.acdh.oeaw.ac.at/schema#Place:
     - match: ^https://sws.geonames.org/
       resolve: "%id%/about.rdf"
