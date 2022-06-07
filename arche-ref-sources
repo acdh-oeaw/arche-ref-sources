@@ -126,7 +126,7 @@ foreach ($cfg->classes as $class => $cCfg) {
             }
             foreach ($ids as $id) {
                 $url     = str_replace('%id%', $id, $mCfg->resolve);
-                $refMeta = fetch($url, $id, $client, $mCfg->format);
+                $refMeta = fetch($url, $id, $client, $mCfg->format, $mCfg->resolve);
                 if ($refMeta === null) {
                     echo "ERROR: Failed to load data from $url\n";
                     continue;
@@ -208,7 +208,7 @@ if (!empty($param->output)) {
     file_put_contents($param->output, $outputGraph->serialise('text/turtle'));
 }
 
-function fetch(string $url, string $id, Client $client, string $format): ?Resource {
+function fetch(string $url, string $id, Client $client, string $format, string $resolve): ?Resource {
     echo "fetching $id from $url\n";
     $response = $client->send(new Request('get', $url));
     if ($response->getStatusCode() !== 200) {
@@ -222,7 +222,7 @@ function fetch(string $url, string $id, Client $client, string $format): ?Resour
     if (count($refMeta->propertyUris()) === 0) {
         $redirectUrl = $response->getHeader('X-Guzzle-Redirect-History');
         $redirectUrl = array_pop($redirectUrl);
-        $matchRegex  = "`" . str_replace('%id%', '(.*)', $mCfg->resolve) . "`";
+        $matchRegex  = "`" . str_replace('%id%', '(.*)', $resolve) . "`";
         $matches     = null;
         preg_match($matchRegex, $redirectUrl, $matches);
         if (count($matches) >= 2) {
@@ -244,7 +244,7 @@ function resolve(Resource $meta, array $path, Client $client, object $mCfg): arr
         if (count($res->propertyUris()) === 0) {
             $id  = $res->getUri();
             $url = str_replace('%id%', $id, $mCfg->resolve);
-            $res = fetch($url, $id, $client, $mCfg->format);
+            $res = fetch($url, $id, $client, $mCfg->format, $mCfg->resolve);
             if ($res !== null) {
                 $values = array_merge($values, resolve($res, $path, $client, $mCfg));
             }
