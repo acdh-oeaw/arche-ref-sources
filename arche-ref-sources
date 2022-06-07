@@ -114,7 +114,8 @@ foreach ($cfg->classes as $class => $cCfg) {
 
         // sanitize property config
         foreach ($mCfg->mapping as $pCfg) {
-            $pCfg->langRequired = (bool) $pCfg->langRequired ?? false;
+            $pCfg->langRequired = (bool) ($pCfg->langRequired ?? false);
+            $pCfg->forceLang    = $pCfg->forceLang ?? '';
             $pCfg->defaultLang  = $pCfg->defaultLang ?? '';
         }
 
