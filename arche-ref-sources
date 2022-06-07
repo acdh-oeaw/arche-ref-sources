@@ -112,6 +112,12 @@ foreach ($cfg->classes as $class => $cCfg) {
         $idFilter = !empty($param->id) ? "^" . $param->id . "$" : "$mCfg->match";
         $source->setFilter($class, $idFilter, $dateFilter, $param->limit);
 
+        // sanitize property config
+        foreach ($mCfg->mapping as $pCfg) {
+            $pCfg->langRequired = (bool) $pCfg->langRequired ?? false;
+            $pCfg->defaultLang  = $pCfg->defaultLang ?? '';
+        }
+
         foreach ($source->getNamedEntities() as $N => $namedEntity) {
             /* @var $namedEntity NamedEntityInterface */
             $N  = $N + 1;
@@ -155,7 +161,12 @@ foreach ($cfg->classes as $class => $cCfg) {
                                 $i    = $normalizer->normalize((string) $i);
                                 break;
                             case 'literal':
-                                $lang = $pCfg->lang ?? (string) ($i instanceof Literal ? $i->getLang() : '');
+                                $lang = (string) ($i instanceof Literal ? $i->getLang() : '');
+                                if ($pCfg->forceLang) {
+                                    $lang = $pCfg->forceLang;
+                                } elseif ($pCfg->langRequired && !empty($pCfg->defaultLang)) {
+                                    $lang = $pCfg->defaultLang;
+                                }
                                 break;
                             case 'resource':
                                 break;
@@ -166,8 +177,11 @@ foreach ($cfg->classes as $class => $cCfg) {
                             $newValues[$pCfg->property][$lang] = [];
                         }
                         $maxCountCond = count($newValues[$pCfg->property][$lang]) < ($pCfg->maxPerLang ?? PHP_INT_MAX);
-                        $langReqCond  = !empty($lang) || !($pCfg->langRequired ?? false);
+                        $langReqCond  = !empty($lang) || !$pCfg->langRequired;
                         if ($maxCountCond && $langReqCond) {
+                            if (empty($lang) && !empty($pCfg->defaultLang ?? '')) {
+                                $lang = $pCfg->defaultLang;
+                            }
                             $newValues[$pCfg->property][$lang][] = (string) $i;
                         }
                     }
@@ -208,7 +222,8 @@ if (!empty($param->output)) {
     file_put_contents($param->output, $outputGraph->serialise('text/turtle'));
 }
 
-function fetch(string $url, string $id, Client $client, string $format, string $resolve): ?Resource {
+function fetch(string $url, string $id, Client $client, string $format,
+               string $resolve): ?Resource {
     echo "fetching $id from $url\n";
     $response = $client->send(new Request('get', $url));
     if ($response->getStatusCode() !== 200) {
