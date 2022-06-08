@@ -32,7 +32,7 @@ classes:
           # (optional) Only values matching given regexp will be included.
           # Can be used e.g. to allow only identifiers in allowed namespaces (like here).
           # (if "match" is provided, both conditions must be fulfilled)
-          match: viaf.org|wikidata.org|d-nb.info
+          match: viaf.org|wikidata.org|d-nb.info|orcid.org
           # (optional) Only values which don't match given regexp will be included.
           # Can be used e.g. to skip identifiers in namespaces we don't trust (like here).
           # (if "match" is provided, both conditions must be fulfilled)
@@ -99,6 +99,36 @@ classes:
           type: literal
           path:
             - http://xmlns.com/foaf/0.1/page
+    - match: ^http://viaf.org/viaf/
+      resolve: "%id%"
+      format: application/rdf+xml
+      mapping:
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+          type: id
+          path:
+            - http://schema.org/sameAs
+          match: viaf.org|wikidata.org|d-nb.info
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+          type: literal
+          langRequired: true
+          defaultLang: und
+          maxPerLang: 1
+          path:
+            - http://www.w3.org/2004/02/skos/core#prefLabel
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
+          type: literal
+          langRequired: true
+          defaultLang: und
+          maxPerLang: 1
+          path:
+            - http://schema.org/givenName
+        - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
+          type: literal
+          langRequired: true
+          defaultLang: und
+          maxPerLang: 1
+          path:
+            - http://schema.org/familyName
 https://vocabs.acdh.oeaw.ac.at/schema#Organisation:
     - match: ^https://d-nb.info/gnd
       resolve: "%id%/about/lds.ttl"
