@@ -226,7 +226,7 @@ if (!empty($param->output)) {
 function fetch(string $url, string $id, Client $client, string $format,
                string $resolve): ?Resource {
     echo "fetching $id from $url\n";
-    $response = $client->send(new Request('get', $url));
+    $response = $client->send(new Request('get', $url, ['Accept' => $format]));
     if ($response->getStatusCode() !== 200) {
         return null;
     }
