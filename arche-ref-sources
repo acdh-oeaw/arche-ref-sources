@@ -25,20 +25,22 @@
  * THE SOFTWARE.
  */
 
-#use RuntimeException;
-
-use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Exception\ClientException;
-use EasyRdf\Graph;
-use EasyRdf\Resource;
-use EasyRdf\Literal;
 use zozlak\argparse\ArgumentParser as AP;
+use GuzzleHttp\Exception\ClientException;
+use quickRdf\Dataset;
+use quickRdf\DataFactory as DF;
+use quickRdfIo\Util as ioUtil;
 use acdhOeaw\UriNormalizer;
-use acdhOeaw\arche\lib\Schema;
+use acdhOeaw\UriNormRules;
+use acdhOeaw\UriNormalizerRule;
+use acdhOeaw\UriNormalizerCache;
+use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
 use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
+use acdhOeaw\arche\refSources\NamedEntityIteratorInterface;
 use acdhOeaw\arche\refSources\NamedEntityInterface;
+use acdhOeaw\arche\refSources\Util;
+use acdhOeaw\arche\refSources\PropertyMapping;
 
 if (file_exists(__DIR__ . '/../../autoload.php')) {
     require_once __DIR__ . '/../../autoload.php';
@@ -63,7 +65,6 @@ $parser->addArgument('--after', help: 'process only resources modified after a g
 $parser->addArgument('--id', help: 'process only repository resource with a given id');
 $parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
 $parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
-$parser->addArgument('--idProp', help: '(needed only when --inputFile is used and ARCHE repository URL is unknown) RDF property storing resource identifiers.');
 $parser->addArgument('--user', help: 'user name used for repository authentication (not important if --test or --resolveOnly are used)');
 $parser->addArgument('--pswd', help: 'password used for repository authentication (not important if --test or --resolveOnly are used)');
 $parser->addArgument('--mode', default: 'parse', choices: array_keys($modes), help: "operation mode\n    - resolve - only try to resolve the external URI (finds broken external URIs)\n    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n    - update - updates the repository resource with data fetched from the external source\n");
@@ -77,210 +78,103 @@ if (!file_exists($param->cfgFile)) {
 }
 
 // Configuration initialization
-$cfg       = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
-$cfg->auth = $cfg->auth ?? new stdClass();
-if (!empty($param->user) || !isset($cfg->auth->user)) {
-    $cfg->auth->user = $param->user;
-}
-if (!empty($param->pswd) || !isset($cfg->auth->password)) {
-    $cfg->auth->password = $param->pswd;
-}
-if (!empty($param->repoUrl) || !isset($cfg->repositoryUrl)) {
-    $cfg->repositoryUrl = $param->repoUrl;
-}
+$cfg        = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
+$guzzleOpts = [
+    'auth' => [
+        $param->user ?? $cfg->auth->user ?? '',
+        $param->pswd ?? $cfg->auth->password ?? '',
+    ],
+];
 $dateFilter = !empty($param->after) ? $param->after : null;
 
 // Helper objects initialization
-$normalizer  = UriNormalizer::factory();
-$outputGraph = new Graph();
-$client      = new Client([
-    'http_errors'     => false,
-    'allow_redirects' => ['track_redirects' => true]
-    ]);
+$repo       = Repo::factoryFromUrl($param->repositoryUrl ?? $cfg->repositoryUrl ?? die("ARCHE repository URL unknown"), $guzzleOpts);
+$cache      = new UriNormalizerCache();
+$rules      = UriNormRules::getRules();
+$normalizer = new UriNormalizer($rules, cache: $cache);
+/* @var $source NamedEntityIteratorInterface */
 if (!empty($param->inputFile)) {
-    $schema = ['id' => $param->idProp];
-    $schema = new Schema((object) $schema);
-    $source = new NamedEntityIteratorFile($param->inputFile, $cfg->repositoryUrl, $schema, $cfg->auth->user, $cfg->auth->password);
+    $source = new NamedEntityIteratorFile($param->inputFile, $repo);
 } else {
-    $source = new NamedEntityIteratorRepo($cfg->repositoryUrl, $cfg->auth->user, $cfg->auth->password);
+    $source = new NamedEntityIteratorRepo($repo);
+}
+if (!empty($param->id)) {
+    $param->id = $normalizer->normalize($param->id);
 }
 
-// Do the job
+// Fetch the data from external sources
+$outputMeta = new Dataset(false);
 foreach ($cfg->classes as $class => $cCfg) {
     echo "\n### Processing resources of class $class\n\n";
-    foreach ($cCfg as $mCfg) {
-        $idFilter = !empty($param->id) ? "^" . $param->id . "$" : "$mCfg->match";
+
+    //TODO - first resources should be collected,
+    //     - then all namespaces should be processed for a given resource
+    //     - then update should be performed
+    foreach ($cCfg as $namespace => $mappings) {
+        echo "\n  ### Processing resources in the $namespace namespace\n\n";
+
+        $normRule = array_filter($rules, fn($x) => $x->name === $namespace);
+        $normRule = array_pop($normRule) ?? die("Normalization rules unknown for the $namespace namespace");
+        $normRule = UriNormalizerRule::factory($normRule);
+        $db       = new UriNormalizer([$normRule], cache: $cache);
+        $idFilter = !empty($param->id) ? "^" . $param->id . "$" : $normRule->match;
         $source->setFilter($class, $idFilter, $dateFilter, $param->limit);
 
-        // sanitize property config
-        foreach ($mCfg->mapping as $pCfg) {
-            $pCfg->langRequired = (bool) ($pCfg->langRequired ?? false);
-            $pCfg->forceLang    = $pCfg->forceLang ?? '';
-            $pCfg->defaultLang  = $pCfg->defaultLang ?? '';
-        }
+        $mappings = PropertyMapping::fromConfig($mappings);
 
         foreach ($source->getNamedEntities() as $N => $namedEntity) {
             /* @var $namedEntity NamedEntityInterface */
-            $N  = $N + 1;
-            $T  = $source->getCount();
-            $NN = round(100 * $N / $T);
-            echo "Resource " . $namedEntity->getUri() . " ($N/$T $NN%)\n";
+            $N              = $N + 1;
+            $T              = $source->getCount();
+            $NN             = round(100 * $N / $T);
+            $namedEntityUri = DF::namedNode($namedEntity->getUri());
+            echo "    Resource $namedEntityUri ($N/$T $NN%)\n";
 
-            $newValues = [];
-            $ids       = $namedEntity->getIdentifiers($mCfg->match);
+            $ids = $namedEntity->getIdentifiers($normRule->match, $db);
             if (count($ids) === 0) {
-                echo "WARNING: no matching identifiers\n";
+                echo "      WARNING: no matching identifiers\n";
+                continue;
             }
+
+            $newMeta = new Dataset(false);
             foreach ($ids as $id) {
-                $url     = str_replace('%id%', $id, $mCfg->resolve);
-                $refMeta = fetch($url, $id, $client, $mCfg->format, $mCfg->resolve);
-                if ($refMeta === null) {
-                    echo "ERROR: Failed to load data from $url\n";
-                    continue;
-                }
-                if (count($refMeta->propertyUris()) === 0) {
-                    echo "ERROR: Data fetched from $url doesn't contain the $id resource\n";
+                try {
+                    $dbMeta = $db->fetch($id);
+                } catch (Throwable $e) {
+                    echo "      ERROR: Failed to load data from $id with error: " . $e->getMessage() . "\n";
                     continue;
                 }
                 if ($param->mode <= MODE_RESOLVE) {
                     continue;
                 }
-                $h = fopen('foo', 'a');
-                fwrite($h, $refMeta->dump('text'));
-                fclose($h);
 
-                foreach ($mCfg->mapping as $pCfg) {
-                    if (!isset($newValues[$pCfg->property])) {
-                        $newValues[$pCfg->property] = [];
-                    }
-                    $values = resolve($refMeta, $pCfg->path, $client, $mCfg);
-                    $values = filter($values, $pCfg->match ?? null, $pCfg->skip ?? null);
-                    foreach ($values as $i) {
-                        $lang = '_';
-                        switch ($pCfg->type) {
-                            case 'id':
-                                $i    = $normalizer->normalize((string) $i);
-                                break;
-                            case 'literal':
-                                $lang = (string) ($i instanceof Literal ? $i->getLang() : '');
-                                if ($pCfg->forceLang) {
-                                    $lang = $pCfg->forceLang;
-                                } elseif ($pCfg->langRequired && !empty($pCfg->defaultLang)) {
-                                    $lang = $pCfg->defaultLang;
-                                }
-                                break;
-                            case 'resource':
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown property type $pCfg->type");
-                        }
-                        if (!isset($newValues[$pCfg->property][$lang])) {
-                            $newValues[$pCfg->property][$lang] = [];
-                        }
-                        $maxCountCond = count($newValues[$pCfg->property][$lang]) < ($pCfg->maxPerLang ?? PHP_INT_MAX);
-                        $langReqCond  = !empty($lang) || !$pCfg->langRequired;
-                        if ($maxCountCond && $langReqCond) {
-                            if (empty($lang) && !empty($pCfg->defaultLang ?? '')) {
-                                $lang = $pCfg->defaultLang;
-                            }
-                            $newValues[$pCfg->property][$lang][] = (string) $i;
-                        }
-                    }
+                foreach ($mappings as $pCfg) {
+                    /* @var $pCfg PropertyMapping */
+                    $pCfg->merge($newMeta, $dbMeta, $namedEntityUri, $normalizer);
                 }
             }
-            if ($param->mode <= MODE_RESOLVE) {
-                continue;
-            }
-
-            $newMeta = (new Graph())->resource($namedEntity->getUri());
-            foreach ($newValues as $prop => $langs) {
-                foreach ($langs as $lang => $values) {
-                    foreach ($values as $n => $value) {
-                        if ($lang === '_') {
-                            $newMeta->addResource($prop, $value);
-                        } else {
-                            $newMeta->addLiteral($prop, $value, empty($lang) ? null : $lang);
-                        }
-                    }
-                }
-            }
-            echo $param->verbose ? $newMeta->dump('text') : '';
             if (!empty($param->output)) {
-                $newMeta->copy([], '/^$/', '', $outputGraph);
+                $outputMeta->add($newMeta);
             }
             if ($param->mode <= MODE_PARSE) {
                 continue;
             }
+            // ARCHE update goes here
             try {
-                $namedEntity->updateMetadata($newMeta, $param->mode <= MODE_TEST);
+                $namedEntity->updateMetadata(Util::asEasyRdfResource($newMeta, $namedEntity->getUri()), $param->mode <= MODE_TEST);
+                echo $param->verbose ? "      INFO: updated successfully\n" : "";
             } catch (ClientException $ex) {
-                echo "ERROR: " . (string) $ex->getResponse()->getBody() . "\n";
+                echo "      ERROR: " . (string) $ex->getResponse()->getBody() . "\n";
             }
         }
     }
 }
+echo $param->verbose ? "\n### Collected metadata:\n\n$outputMeta\n" : '';
 if (!empty($param->output)) {
-    file_put_contents($param->output, $outputGraph->serialise('text/turtle'));
-}
-
-function fetch(string $url, string $id, Client $client, string $format,
-               string $resolve): ?Resource {
-    echo "fetching $id from $url\n";
-    $response = $client->send(new Request('get', $url, ['Accept' => $format]));
-    if ($response->getStatusCode() !== 200) {
-        return null;
+    echo "\n### Writing collected metadata to $param->output\n";
+    $nmsp = new quickRdf\RdfNamespace();
+    foreach ($cfg->namespaces ?? [] as $alias => $prefix) {
+        $nmsp->add($prefix, $alias);
     }
-    $graph   = new Graph();
-    $graph->parse((string) $response->getBody(), $format);
-    $refMeta = $graph->resource($id);
-
-    // if there were redirects try to adjust the id based on redirect URLs
-    if (count($refMeta->propertyUris()) === 0) {
-        $redirectUrl = $response->getHeader('X-Guzzle-Redirect-History');
-        $redirectUrl = array_pop($redirectUrl);
-        $matchRegex  = "`" . str_replace('%id%', '(.*)', $resolve) . "`";
-        $matches     = null;
-        preg_match($matchRegex, $redirectUrl, $matches);
-        if (count($matches) >= 2) {
-            $refMeta = $graph->resource($matches[1]);
-        }
-    }
-
-    return $refMeta;
-}
-
-function resolve(Resource $meta, array $path, Client $client, object $mCfg): array {
-    if (count($path) < 2) {
-        return $meta->all($path[0]);
-    }
-    $prop   = array_shift($path);
-    $values = [];
-    foreach ($meta->allResources($prop) as $res) {
-        /* @var $res \EasyRdf\Resource */
-        if (count($res->propertyUris()) === 0) {
-            $id  = $res->getUri();
-            $url = str_replace('%id%', $id, $mCfg->resolve);
-            $res = fetch($url, $id, $client, $mCfg->format, $mCfg->resolve);
-            if ($res !== null) {
-                $values = array_merge($values, resolve($res, $path, $client, $mCfg));
-            }
-        } else {
-            $values = array_merge($values, resolve($res, $path, $client, $mCfg));
-        }
-    }
-    return $values;
-}
-
-function filter(array $values, ?string $match, ?string $skip): array {
-    if (empty($match) && empty($skip)) {
-        return $values;
-    }
-    $filtered = [];
-    $skip     = empty($skip) ? '^$' : $skip;
-    foreach ($values as $i) {
-        if (preg_match("`$match`", (string) $i) && !preg_match("`$skip`", (string) $i)) {
-            $filtered[] = $i;
-        }
-    }
-    return $filtered;
+    ioUtil::serialize($outputMeta, 'text/turtle', $param->output, $nmsp);
 }

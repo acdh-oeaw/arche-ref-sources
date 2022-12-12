@@ -32,7 +32,7 @@ namespace acdhOeaw\arche\refSources;
  */
 interface NamedEntityIteratorInterface {
 
-    public function setFilter(string $class, string $idMatch,
+    public function setFilter(?string $class = null, ?string $idMatch = null,
                               ?string $minModDate = null, ?int $limit = null): void;
 
     public function getNamedEntities(): \Generator;

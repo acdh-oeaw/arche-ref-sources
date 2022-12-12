@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\refSources;
 
 use EasyRdf\Resource;
+use acdhOeaw\UriNormalizer;
 
 /**
  *
@@ -36,7 +37,12 @@ interface NamedEntityInterface {
 
     public function getUri(): string;
 
-    public function getIdentifiers(string $match): array;
+    /**
+     * 
+     * @param string $match
+     * @return array<string>
+     */
+    public function getIdentifiers(string $match, UriNormalizer $normalizer): array;
 
     public function updateMetadata(Resource $meta): void;
 }

@@ -13,12 +13,15 @@
     ],
     "require": {
         "php": ">=8",
-        "guzzlehttp/guzzle": "^7 | ^6",
+        "guzzlehttp/guzzle": "^7",
         "acdh-oeaw/arche-lib": "*",
         "psr/log": "*",
-        "acdh-oeaw/arche-assets": "^3.2",
-        "acdh-oeaw/uri-normalizer": "^1.1",
-        "zozlak/argparse": "*"
+        "acdh-oeaw/arche-assets": "^3.8.1",
+        "acdh-oeaw/uri-normalizer": "^2",
+        "zozlak/argparse": "*",
+        "sweetrdf/quick-rdf-io": "^1",
+        "sweetrdf/quick-rdf": "^1",
+        "sweetrdf/term-templates": "^1"
     },
     "autoload": {
         "psr-4": {

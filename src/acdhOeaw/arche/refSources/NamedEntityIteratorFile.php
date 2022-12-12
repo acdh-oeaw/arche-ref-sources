@@ -26,9 +26,16 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use RuntimeException;
 use EasyRdf\Graph;
 use EasyRdf\Resource;
+use EasyRdf\Literal;
+use quickRdf\Dataset;
+use quickRdf\DataFactory;
+use rdfInterface\LiteralInterface;
+use termTemplates\QuadTemplate as QT;
+use termTemplates\ValueTemplate as VT;
+use quickRdfIo\Util as ioUtil;
+use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
@@ -41,70 +48,51 @@ use acdhOeaw\UriNormalizer;
  */
 class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
 
-    private Graph $graph;
-    private ?string $id;
+    private Dataset $graph;
     private Schema $schema;
-    private ?Repo $repo       = null;
-    private string $class;
-    private string $idMatch;
-    private ?string $minModDate = null;
-    private ?int $limit      = null;
-    private ?int $count;
-    private UriNormalizer $normalizer;
+    private Repo $repo;
+    private array $filters = [];
+    private ?int $limit   = null;
+    private array $matching;
 
-    public function __construct(string $rdfFilePath, ?string $repoUrl,
-                                ?Schema $schema = null, ?string $user = null,
-                                ?string $password = null) {
-        $this->graph = new Graph();
-        $this->graph->parseFile($rdfFilePath);
-
-        $opts = ['auth' => [$user, $password]];
-        if (!empty($repoUrl)) {
-            $this->repo   = Repo::factoryFromUrl($repoUrl, $opts);
-            $this->schema = $this->repo->getSchema();
-        } else {
-            $this->schema = $schema;
-        }
-        if (empty($this->schema->id ?? null)) {
-            throw new RuntimeException("Both ARCHE repo URL and id property are unknown. Please provide either --repoUrl or --idProp parameter.");
-        }
-        $this->normalizer = UriNormalizer::factory($this->schema->id);
+    public function __construct(string $rdfFilePath, Repo $repo) {
+        $this->graph  = new Dataset();
+        $this->graph->add(ioUtil::parse($rdfFilePath, new DataFactory()));
+        $this->repo   = $repo;
+        $this->schema = $this->repo->getSchema();
     }
 
-    public function setFilter(string $class, string $idMatch,
+    public function setFilter(?string $class = null, ?string $idMatch = null,
                               ?string $minModDate = null, ?int $limit = null): void {
-        $this->class      = $class;
-        $this->idMatch    = "`$idMatch`";
-        $this->minModDate = $minModDate;
-        $this->limit      = $limit;
-        $this->count      = null;
-
-        if (!empty($this->minModDate) && !isset($this->schema->modificationDate)) {
-            throw new RuntimeException("Can't filter by modification date when the ARCHE repo URL is unknown. Please provide the --repoUrl parameter.");
+        $this->filters = [];
+        if (!empty($class)) {
+            $this->filters[] = new QT(null, DataFactory::namedNode(RDF::RDF_TYPE), DataFactory::namedNode($class));
         }
+        if (!empty($idMatch)) {
+            $this->filters[] = new QT(null, DataFactory::namedNode($this->schema->id), new VT("`$idMatch`", VT::REGEX));
+        }
+        if (!empty($minModDate)) {
+            $this->filters[] = new QT(null, DataFactory::namedNode($this->schema->modificationDate), new VT($minModDate, VT::GREATER_EQUAL));
+        }
+        $this->limit = $limit;
+        unset($this->matching);
     }
 
     public function getNamedEntities(): \Generator {
-        $n = 1;
-        foreach ($this->graph->resources() as $res) {
-            if ($n > $this->limit) {
-                break;
-            }
-            if ($this->isMatching($res)) {
-                $n++;
-                yield new NamedEntityFile($res, $this);
-            }
+        if (!isset($this->matching)) {
+            $this->findMatching();
+        }
+        foreach ($this->matching as $i) {
+            $tmp = $this->graph->copy(new QT($i));
+            yield new NamedEntityFile(Util::asEasyRdfResource($tmp), $this);
         }
     }
 
     public function getCount(): int {
-        if ($this->count === null) {
-            $this->count = 0;
-            foreach ($this->graph->resources() as $res) {
-                $this->count += (int) $this->isMatching($res);
-            }
+        if (!isset($this->matching)) {
+            $this->findMatching();
         }
-        return $this->count;
+        return count($this->matching);
     }
 
     public function getIdProp(): string {
@@ -112,9 +100,6 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
     }
 
     public function getRepoResource(Resource $meta): RepoResource {
-        if ($this->repo === null) {
-            throw new RuntimeException("Can't update repository resource when the ARCHE repo URL is unknown. Please provide the --repoUrl parameter.");
-        }
         $ids = [];
         foreach ($meta->allResources($this->schema->id) as $id) {
             $ids[] = (string) $id;
@@ -122,16 +107,22 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
         return $this->repo->getResourceByIds($ids);
     }
 
-    private function isMatching(Resource $res): bool {
-        if (!$res->isA($this->class)) {
-            return false;
-        }
-        foreach ($res->allResources($this->schema->id) as $id) {
-            $id = $this->normalizer->normalize((string) $id);
-            if (preg_match($this->idMatch, $id)) {
-                return true;
+    private function findMatching(): void {
+        $this->matching = [];
+        $n              = $this->limit;
+        foreach ($this->graph->listSubjects() as $sbj) {
+            $tmp     = $this->graph->copy(new QT($sbj));
+            $matches = true;
+            foreach ($this->filters as $f) {
+                $matches &= $tmp->any($f);
+            }
+            if ($matches) {
+                $this->matching[] = $sbj;
+                $n--;
+            }
+            if ($n === 0) {
+                break;
             }
         }
-        return false;
     }
 }

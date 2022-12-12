@@ -27,6 +27,7 @@
 namespace acdhOeaw\arche\refSources;
 
 use EasyRdf\Resource;
+use acdhOeaw\UriNormalizer;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
 
@@ -45,14 +46,19 @@ class NamedEntityRepo implements NamedEntityInterface {
         $this->repo = $res->getRepo();
     }
 
-    public function getIdentifiers(string $match): array {
+    /**
+     * 
+     * @param string $match
+     * @return array<string>
+     */
+    public function getIdentifiers(string $match, UriNormalizer $normalizer): array {
         $match  = "`$match`";
         $idProp = $this->repo->getSchema()->id;
         $ids    = [];
         foreach ($this->res->getGraph()->allResources($idProp) as $id) {
             $id = (string) $id;
             if (preg_match($match, $id)) {
-                $ids[] = $id;
+                $ids[] = $normalizer->normalize($id);
             }
         }
         return $ids;

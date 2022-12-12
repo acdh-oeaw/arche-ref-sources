@@ -27,8 +27,8 @@
 namespace acdhOeaw\arche\refSources;
 
 use EasyRdf\Resource;
-use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\UriNormalizer;
+use acdhOeaw\arche\lib\RepoResource;
 
 /**
  * Description of RefResourceFile
@@ -39,22 +39,24 @@ class NamedEntityFile implements NamedEntityInterface {
 
     private Resource $res;
     private NamedEntityIteratorFile $iter;
-    private UriNormalizer $normalizer;
 
     public function __construct(Resource $res, NamedEntityIteratorFile $iter) {
-        $this->res        = $res;
-        $this->iter       = $iter;
-        $this->normalizer = UriNormalizer::factory();
+        $this->res  = $res;
+        $this->iter = $iter;
     }
 
-    public function getIdentifiers(string $match): array {
+    /**
+     * 
+     * @param string $match
+     * @return array<string>
+     */
+    public function getIdentifiers(string $match, UriNormalizer $normalizer): array {
         $match = "`$match`";
         $ids   = [];
         foreach ($this->res->allResources($this->iter->getIdProp()) as $id) {
             $id = (string) $id;
-            $id = $this->normalizer->normalize($id);
             if (preg_match($match, $id)) {
-                $ids[] = $id;
+                $ids[] = $normalizer->normalize($id);
             }
         }
         return $ids;
@@ -65,8 +67,10 @@ class NamedEntityFile implements NamedEntityInterface {
     }
 
     public function updateMetadata(Resource $meta, bool $test = true): void {
+
         $repoRes = $this->iter->getRepoResource($this->res);
         $repo    = $repoRes->getRepo();
+        /* @var $repo \acdhOeaw\arche\lib\Repo */
         $repo->begin();
         $repoRes->setMetadata($meta);
         $repoRes->updateMetadata(RepoResource::UPDATE_MERGE);

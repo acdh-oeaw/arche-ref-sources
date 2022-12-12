@@ -26,7 +26,6 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use GuzzleHttp\Client;
 use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResourceInterface;
@@ -41,26 +40,31 @@ use acdhOeaw\arche\lib\SearchConfig;
  */
 class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
 
-    private Client $client;
     private Repo $repo;
     private Schema $schema;
+
+    /**
+     * 
+     * @var array<SearchTerm>
+     */
     private array $searchTerms;
     private SearchConfig $searchConfig;
 
-    public function __construct(string $repoUrl, ?string $user = null,
-                                ?string $password = null) {
-        $this->client = new Client();
-        $opts         = ['auth' => [$user, $password]];
-        $this->repo   = Repo::factoryFromUrl($repoUrl, $opts);
-        $this->schema = $this->repo->getSchema();
+    public function __construct(Repo $repo) {
+        $this->repo         = $repo;
+        $this->schema       = $this->repo->getSchema();
+        $this->searchConfig = new SearchConfig();
     }
 
-    public function setFilter(string $class, string $idMatch,
+    public function setFilter(?string $class = null, ?string $idMatch = null,
                               ?string $minModDate = null, ?int $limit = null): void {
-        $this->searchTerms = [
-            new SearchTerm(RDF::RDF_TYPE, $class),
-            new SearchTerm($this->schema->id, $idMatch, '~'),
-        ];
+        $this->searchTerms = [];
+        if (!empty($class)) {
+            $this->searchTerms[] = new SearchTerm(RDF::RDF_TYPE, $class);
+        }
+        if (!empty($idMatch)) {
+            new SearchTerm($this->schema->id, $idMatch, '~');
+        }
         if (!empty($minModDate)) {
             $this->searchTerms[] = new SearchTerm($this->schema->modificationDate, $minModDate, '>=', SearchTerm::TYPE_DATETIME);
         }
