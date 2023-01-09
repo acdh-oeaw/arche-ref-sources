@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2021 Austrian Centre for Digital Humanities.
+ * Copyright 2023 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,18 +26,11 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use Generator;
-
 /**
+ * Description of RefSourcesException
  *
  * @author zozlak
  */
-interface NamedEntityIteratorInterface {
-
-    public function setFilter(?string $class = null, ?string $idMatch = null,
-                              ?string $minModDate = null, ?int $limit = null): void;
-
-    public function getNamedEntities(): Generator;
-
-    public function getCount(): int;
+class RefSourcesException extends \Exception {
+    //put your code here
 }

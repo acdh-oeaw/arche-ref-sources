@@ -63,7 +63,7 @@ class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
             $this->searchTerms[] = new SearchTerm(RDF::RDF_TYPE, $class);
         }
         if (!empty($idMatch)) {
-            new SearchTerm($this->schema->id, $idMatch, '~');
+            $this->searchTerms[] = new SearchTerm($this->schema->id, $idMatch, '~');
         }
         if (!empty($minModDate)) {
             $this->searchTerms[] = new SearchTerm($this->schema->modificationDate, $minModDate, '>=', SearchTerm::TYPE_DATETIME);

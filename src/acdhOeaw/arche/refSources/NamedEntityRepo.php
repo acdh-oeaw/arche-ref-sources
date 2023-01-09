@@ -26,10 +26,14 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use EasyRdf\Resource;
+use quickRdf\Dataset;
+use quickRdf\DataFactory;
+use rdfHelpers\DatasetNode;
 use acdhOeaw\UriNormalizer;
+use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
+use rdfInterface2easyRdf\AsRdfInterface;
 
 /**
  * Description of RefResourceRepo
@@ -37,6 +41,8 @@ use acdhOeaw\arche\lib\RepoResource;
  * @author zozlak
  */
 class NamedEntityRepo implements NamedEntityInterface {
+
+    use NamedEntityTrait;
 
     private RepoResource $res;
     private Repo $repo;
@@ -46,19 +52,27 @@ class NamedEntityRepo implements NamedEntityInterface {
         $this->repo = $res->getRepo();
     }
 
+    public function getMetadata(): DatasetNode {
+        return AsRdfInterface::addDatasetNode(
+                $this->res->getMetadata(),
+                new DataFactory(),
+                fn($x) => new DatasetNode(new Dataset(), $x)
+        );
+    }
+
     /**
      * 
-     * @param string $match
+     * @paramUriNormalizer $normalizer
      * @return array<string>
      */
-    public function getIdentifiers(string $match, UriNormalizer $normalizer): array {
-        $match  = "`$match`";
+    public function getIdentifiers(UriNormalizer $normalizer): array {
         $idProp = $this->repo->getSchema()->id;
         $ids    = [];
         foreach ($this->res->getGraph()->allResources($idProp) as $id) {
-            $id = (string) $id;
-            if (preg_match($match, $id)) {
-                $ids[] = $normalizer->normalize($id);
+            try {
+                $ids[] = $normalizer->normalize((string) $id, true);
+            } catch (UriNormalizerException) {
+                
             }
         }
         return $ids;
@@ -66,16 +80,5 @@ class NamedEntityRepo implements NamedEntityInterface {
 
     public function getUri(): string {
         return $this->res->getUri();
-    }
-
-    public function updateMetadata(Resource $meta, bool $test = true): void {
-        $this->repo->begin();
-        $this->res->setMetadata($meta);
-        $this->res->updateMetadata(RepoResource::UPDATE_MERGE);
-        if ($test) {
-            $this->repo->rollback();
-        } else {
-            $this->repo->commit();
-        }
     }
 }

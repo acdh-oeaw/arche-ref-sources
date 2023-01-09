@@ -26,23 +26,26 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use EasyRdf\Resource;
 use RuntimeException;
 use rdfInterface\LiteralInterface as iLiteral;
 use rdfInterface\NamedNodeInterface as iNamedNode;
+use rdfInterface\TermInterface as iTerm;
 use rdfInterface\QuadInterface as iQuad;
 use rdfInterface\DatasetInterface as iDataset;
 use rdfInterface\DatasetListQuadPartsInterface as iDatasetLQP;
-use rdfInterface\DatasetCompareInterface as iDatasetCompare;
+use rdfInterface\DatasetNodeInterface as iDatasetNode;
+use rdfInterface2easyRdf\AsRdfInterface;
 use quickRdf\Dataset;
 use quickRdf\DataFactory as DF;
+use rdfHelpers\DatasetNode;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\NamedNodeTemplate;
 use termTemplates\ValueTemplate;
 use acdhOeaw\UriNormalizer;
+use acdhOeaw\UriNormalizerException;
 
 /**
- * Description of PropertyMapping
+ * Defines a single target ARCHE property mapping
  *
  * @author zozlak
  */
@@ -59,19 +62,6 @@ class PropertyMapping {
     const TYPE_LITERAL      = 'literal';
     const TYPE_RESOURCE     = 'resource';
 
-    /**
-     * 
-     * @param array<object> $cfg
-     * @return array<PropertyMapping>
-     */
-    static public function fromConfig(array $cfg): array {
-        $defs = [];
-        foreach ($cfg as $i) {
-            $defs[] = new PropertyMapping($i);
-        }
-        return $defs;
-    }
-
     private iNamedNode $property;
     private string $type;
     private string $action;
@@ -86,39 +76,39 @@ class PropertyMapping {
      * @var array<iNamedNode>
      */
     private array $path;
+    private DF $termsFactory;
 
     public function __construct(object $cfg) {
-        $this->property    = DF::namedNode($cfg->property);
-        $this->action      = $cfg->action;
-        $this->type        = $cfg->type;
-        $this->langProcess = $cfg->langProcess ?? self::LANG_PASS;
-        $this->langValue   = $cfg->langValue ?? '';
-        $this->maxPerLang  = $cfg->maxPerLang ?? PHP_INT_MAX;
-        $this->path        = array_map(fn($x) => DF::namedNode($x), $cfg->path);
-        $this->match       = $cfg->match ?? '';
-        $this->skip        = $cfg->skip ?? '';
+        $this->property     = DF::namedNode($cfg->property);
+        $this->action       = $cfg->action;
+        $this->type         = $cfg->type;
+        $this->langProcess  = $cfg->langProcess ?? self::LANG_PASS;
+        $this->langValue    = $cfg->langValue ?? '';
+        $this->maxPerLang   = $cfg->maxPerLang ?? PHP_INT_MAX;
+        $this->path         = array_map(fn($x) => DF::namedNode($x), $cfg->path);
+        $this->match        = $cfg->match ?? '';
+        $this->skip         = $cfg->skip ?? '';
+        $this->termsFactory = new DF();
     }
 
-    public function merge(iDatasetCompare $meta, Resource $dbMeta,
-                          iNamedNode $subject,
-                          UriNormalizer $normalizer): void {
-        $id = DF::namedNode($dbMeta->getUri());
-        $dbMeta = Util::asRdfInterfaceDataset($dbMeta);
-        $dbMeta = $this->resolve($dbMeta, $id, $subject, $normalizer);
-        if (count($dbMeta) === 0) {
+    public function resolveAndMerge(iDatasetNode $meta, iDatasetNode $extDbMeta,
+                                    UriNormalizer $normalizer, bool $normalize): void {
+        $extDbMeta = $this->resolve($extDbMeta, $normalizer, $normalize, $meta->getNode());
+        if (count($extDbMeta->getDataset()) === 0) {
             return;
         }
+        $dataset = $meta->getDataset();
         switch ($this->action) {
             case self::ACTION_ADD:
-                $meta->add($dbMeta);
+                $dataset->add($extDbMeta);
                 break;
             case self::ACTION_REPLACE:
-                $meta->delete(new QT($subject, $this->property));
-                $meta->add($dbMeta);
+                $dataset->delete(new QT($meta->getNode(), $this->property));
+                $dataset->add($extDbMeta);
                 break;
             case self::ACTION_IF_MISSING:
-                if ($meta->none(new QT($subject, $this->property))) {
-                    $meta->add($dbMeta);
+                if ($dataset->none(new QT($meta->getNode(), $this->property))) {
+                    $dataset->add($extDbMeta);
                 }
                 break;
             default:
@@ -128,40 +118,48 @@ class PropertyMapping {
 
     /**
      * 
-     * @param Dataset $meta
-     * @param iNamedNode $id
-     * @param iNamedNode|null $subject subject to assign to resolved data
-     * @param UriNormalizer $normalizer Allows recursive resolution of URIs.
-     * @return Dataset
+     * @param iDatasetNode $meta
+     * @param UriNormalizer $normalizer UriNormalizer object allowing for
+     *   recursive resolution of URIs.
+     * @param iTerm|null $subject optional triples subject to be enforeced on
+     *   ther returned data
+     * @return DatasetNode
      */
-    public function resolve(Dataset $meta, iNamedNode $id,
-                            ?iNamedNode $subject = null,
-                            UriNormalizer $normalizer): iDataset {
-        $values = $this->resolvePath($meta, $id, $subject, $normalizer);
-        $this->filter($values);
-        $this->processLang($values);
+    public function resolve(iDatasetNode $meta, UriNormalizer $normalizer,
+                            bool $normalize, ?iTerm $subject = null): iDatasetNode {
+        $values = $this->resolvePath($meta, $normalizer, $subject);
+        $this->filter($values->getDataset());
+        $this->processLang($values->getDataset());
+        if ($normalize) {
+            $this->normalize($values->getDataset(), $normalizer);
+        }
         return $values;
     }
 
     /**
      * 
-     * @param Dataset $meta
-     * @param iNamedNode $id
-     * @param iNamedNode|null $subject subject to assign to resolved data
-     * @param UriNormalizer $normalizer Allows recursive resolution of URIs.
-     * @return Dataset
+     * @param DatasetNode $meta
+     * @param UriNormalizer $normalizer UriNormalizer object allowing for
+     *   recursive resolution of URIs.
+     * @param iTerm|null $subject optional triples subject to be enforeced on
+     *   ther returned data
+     * @return DatasetNode
      */
-    public function resolvePath(Dataset $meta, iNamedNode $id,
-                                ?iNamedNode $subject = null,
-                                UriNormalizer $normalizer): iDataset {
+    public function resolvePath(iDatasetNode $meta, UriNormalizer $normalizer,
+                                ?iTerm $subject = null): iDatasetNode {
         // fetch triples
-        $data = $this->resolveRecursively($meta, $id, $normalizer, $this->path);
+        $data    = $this->resolveRecursively($meta->getDataset(), $meta->getNode(), $normalizer, $this->path);
         // fix their subject and map the predicate
-        $data->forEach(fn(iQuad $x) => $x->withSubject($subject ?? $id)->withPredicate($this->property));
-        return $data;
+        $subject ??= $meta->getNode();
+        $data->forEach(fn(iQuad $x) => $x->withSubject($subject)->withPredicate($this->property));
+        return $meta->withDataset($data)->withNode($subject);
     }
 
-    public function filter(iDataset $values): void {
+    public function getProperty(): iNamedNode {
+        return $this->property;
+    }
+
+    private function filter(iDataset $values): void {
         $match = $this->match;
         $skip  = $this->skip;
         if (empty($match) && empty($skip)) {
@@ -171,7 +169,7 @@ class PropertyMapping {
         $values->deleteExcept(fn(iQuad $x) => preg_match("`$match`", $x->getObject()->getValue()) && !preg_match("`$skip`", $x->getObject()->getValue()));
     }
 
-    public function processLang(iDataset $meta): void {
+    private function processLang(iDataset $meta): void {
         if ($this->type !== self::TYPE_LITERAL) {
             return;
         }
@@ -181,8 +179,11 @@ class PropertyMapping {
         $counts   = [];
         $meta->forEach(function (iQuad $x) use ($process, $value, $maxCount,
                                                 &$counts) {
+            $literal = $x->getObject();
+            if (!($literal instanceof iLiteral)) {
+                return $x->withObject(DF::literal($literal->getValue()));
+            }
             /* @var $literal iLiteral */
-            $literal       = $x->getObject();
             $lang          = match ($process) {
                 PropertyMapping::LANG_PASS => $literal->getLang(),
                 PropertyMapping::LANG_ASSURE => $literal->getLang() ?? $value,
@@ -199,6 +200,26 @@ class PropertyMapping {
         });
     }
 
+    private function normalize(iDataset $meta, UriNormalizer $normalizer): void {
+        $meta->forEach(function (iQuad $x) use ($normalizer) {
+            $obj = $x->getObject();
+            if (!($obj instanceof iLiteral) && !($obj instanceof iNamedNode)) {
+                return $x;
+            }
+            try {
+                $val = $normalizer->normalize($obj->getValue());
+                if ($obj instanceof iNamedNode) {
+                    $val = DF::namedNode($val);
+                } else {
+                    $val = DF::literal($val, $obj->getLang(), $obj->getDatatype());
+                }
+                return $x->withObject($val);
+            } catch (UriNormalizerException) {
+                return $x;
+            }
+        });
+    }
+
     /**
      * 
      * @param iDatasetLQP $meta
@@ -208,8 +229,7 @@ class PropertyMapping {
      * @return Dataset
      */
     private function resolveRecursively(iDatasetLQP $meta, iNamedNode $sbj,
-                                        UriNormalizer $normalizer,
-                                        array $path): Dataset {
+                                        UriNormalizer $normalizer, array $path): Dataset {
         if (count($path) < 2) {
             return $meta->copy(new QT($sbj, $path[0]));
         }
@@ -222,9 +242,14 @@ class PropertyMapping {
                 $values->union($this->resolveRecursively($meta, $newSbj, $normalizer, $path));
             } else {
                 // just empty object - try to resolve it
-                $newMeta = Util::asRdfInterfaceDataset($normalizer->fetch($newSbj->getValue()));
-                if ($newMeta !== null) {
-                    $values->union($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
+                try {
+                    $newMeta = $normalizer->fetch($newSbj->getValue());
+                    $newMeta = AsRdfInterface::addDataset($newMeta, $this->termsFactory, new Dataset());
+                    if ($newMeta !== null) {
+                        $values->union($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
+                    }
+                } catch (UriNormalizerException $e) {
+                    echo "error: unable to resolve the URI: " . $e->getMessage() . "\n";
                 }
             }
         }

@@ -26,9 +26,12 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use EasyRdf\Resource;
+use quickRdf\DataFactory as DF;
+use rdfHelpers\DatasetNode;
+use termTemplates\QuadTemplate as QT;
 use acdhOeaw\UriNormalizer;
-use acdhOeaw\arche\lib\RepoResource;
+use acdhOeaw\UriNormalizerException;
+use acdhOeaw\arche\lib\Repo;
 
 /**
  * Description of RefResourceFile
@@ -37,47 +40,42 @@ use acdhOeaw\arche\lib\RepoResource;
  */
 class NamedEntityFile implements NamedEntityInterface {
 
-    private Resource $res;
-    private NamedEntityIteratorFile $iter;
+    use NamedEntityTrait;
 
-    public function __construct(Resource $res, NamedEntityIteratorFile $iter) {
-        $this->res  = $res;
+    private DatasetNode $node;
+    private NamedEntityIteratorFile $iter;
+    private Repo $repo;
+
+    public function __construct(DatasetNode $node,
+                                NamedEntityIteratorFile $iter, Repo $repo) {
+        $this->node = $node;
         $this->iter = $iter;
+        $this->repo = $repo;
+    }
+
+    public function getMetadata(): DatasetNode {
+        return $this->node;
     }
 
     /**
      * 
-     * @param string $match
+     * @param UriNormalizer $normalizer
      * @return array<string>
      */
-    public function getIdentifiers(string $match, UriNormalizer $normalizer): array {
-        $match = "`$match`";
-        $ids   = [];
-        foreach ($this->res->allResources($this->iter->getIdProp()) as $id) {
-            $id = (string) $id;
-            if (preg_match($match, $id)) {
-                $ids[] = $normalizer->normalize($id);
+    public function getIdentifiers(UriNormalizer $normalizer): array {
+        $allIds = $this->node->getIterator(new QT(predicate: DF::namedNode($this->iter->getIdProp())));
+        $ids    = [];
+        foreach (iterator_to_array($allIds) as $id) {
+            try {
+                $ids[] = $normalizer->normalize((string) $id->getObject()->getValue(), true);
+            } catch (UriNormalizerException $e) {
+                
             }
         }
         return $ids;
     }
 
     public function getUri(): string {
-        return $this->res->getUri();
-    }
-
-    public function updateMetadata(Resource $meta, bool $test = true): void {
-
-        $repoRes = $this->iter->getRepoResource($this->res);
-        $repo    = $repoRes->getRepo();
-        /* @var $repo \acdhOeaw\arche\lib\Repo */
-        $repo->begin();
-        $repoRes->setMetadata($meta);
-        $repoRes->updateMetadata(RepoResource::UPDATE_MERGE);
-        if ($test) {
-            $repo->rollback();
-        } else {
-            $repo->commit();
-        }
+        return $this->node->getNode()->getValue();
     }
 }

@@ -26,20 +26,17 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use EasyRdf\Graph;
 use EasyRdf\Resource;
-use EasyRdf\Literal;
 use quickRdf\Dataset;
 use quickRdf\DataFactory;
-use rdfInterface\LiteralInterface;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\ValueTemplate as VT;
+use rdfHelpers\DatasetNode;
 use quickRdfIo\Util as ioUtil;
 use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
-use acdhOeaw\UriNormalizer;
 
 /**
  * Description of NamedEntityIteratorFile
@@ -83,8 +80,9 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
             $this->findMatching();
         }
         foreach ($this->matching as $i) {
-            $tmp = $this->graph->copy(new QT($i));
-            yield new NamedEntityFile(Util::asEasyRdfResource($tmp), $this);
+            $meta = $this->graph->copy(new QT($i));
+            $meta = new DatasetNode($meta, $i);
+            yield new NamedEntityFile($meta, $this, $this->repo);
         }
     }
 
@@ -97,14 +95,6 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
 
     public function getIdProp(): string {
         return $this->schema->id;
-    }
-
-    public function getRepoResource(Resource $meta): RepoResource {
-        $ids = [];
-        foreach ($meta->allResources($this->schema->id) as $id) {
-            $ids[] = (string) $id;
-        }
-        return $this->repo->getResourceByIds($ids);
     }
 
     private function findMatching(): void {

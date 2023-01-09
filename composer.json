@@ -14,14 +14,15 @@
     "require": {
         "php": ">=8",
         "guzzlehttp/guzzle": "^7",
-        "acdh-oeaw/arche-lib": "*",
-        "psr/log": "*",
+        "acdh-oeaw/arche-lib": "^5",
+        "psr/log": "^3",
         "acdh-oeaw/arche-assets": "^3.8.1",
         "acdh-oeaw/uri-normalizer": "^2",
-        "zozlak/argparse": "*",
+        "zozlak/argparse": "^1",
         "sweetrdf/quick-rdf-io": "^1",
         "sweetrdf/quick-rdf": "^1",
-        "sweetrdf/term-templates": "^1"
+        "sweetrdf/term-templates": "^1",
+        "sweetrdf/rdfinterface2easyrdf": "^0.2"
     },
     "autoload": {
         "psr-4": {
@@ -29,8 +30,8 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "*",
-        "phpstan/phpstan": "*"
+        "phpunit/phpunit": "^9",
+        "phpstan/phpstan": "^1"
     },
     "autoload-dev": {
         "psr-4": {
@@ -39,5 +40,6 @@
     },
     "bin": [
         "arche-ref-sources"
-    ]
+    ],
+    "minimum-stability": "dev"
 }

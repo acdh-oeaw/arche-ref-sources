@@ -26,8 +26,8 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use EasyRdf\Resource;
 use acdhOeaw\UriNormalizer;
+use rdfHelpers\DatasetNode;
 
 /**
  *
@@ -39,10 +39,12 @@ interface NamedEntityInterface {
 
     /**
      * 
-     * @param string $match
+     * @param UriNormalizer $normalizer
      * @return array<string>
      */
-    public function getIdentifiers(string $match, UriNormalizer $normalizer): array;
+    public function getIdentifiers(UriNormalizer $normalizer): array;
 
-    public function updateMetadata(Resource $meta): void;
+    public function getMetadata(): DatasetNode;
+
+    public function updateMetadata(DatasetNode $meta): array;
 }

@@ -26,21 +26,22 @@
  */
 
 use zozlak\argparse\ArgumentParser as AP;
-use GuzzleHttp\Exception\ClientException;
-use quickRdf\Dataset;
 use quickRdf\DataFactory as DF;
+use quickRdf\Dataset;
 use quickRdfIo\Util as ioUtil;
+use rdfInterface2easyRdf\AsRdfInterface;
+use rdfHelpers\DatasetNode;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormRules;
 use acdhOeaw\UriNormalizerRule;
 use acdhOeaw\UriNormalizerCache;
+use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
 use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
 use acdhOeaw\arche\refSources\NamedEntityIteratorInterface;
-use acdhOeaw\arche\refSources\NamedEntityInterface;
-use acdhOeaw\arche\refSources\Util;
-use acdhOeaw\arche\refSources\PropertyMapping;
+use acdhOeaw\arche\refSources\PropertyMappings;
+use acdhOeaw\arche\refSources\RefSourcesException;
 
 if (file_exists(__DIR__ . '/../../autoload.php')) {
     require_once __DIR__ . '/../../autoload.php';
@@ -59,17 +60,18 @@ $modes       = [
     'test'    => MODE_TEST,
     'update'  => MODE_UPDATE,
 ];
-$parser      = new AP("Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\nWhich resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.");
+$parser      = new AP(epilog: "Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\nWhich resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.");
 $parser->addArgument('--limit', type: AP::TYPE_INT, default: PHP_INT_MAX, help: 'limit number of processed resources');
 $parser->addArgument('--after', help: 'process only resources modified after a given date');
-$parser->addArgument('--id', help: 'process only repository resource with a given id');
+$parser->addArgument('--id', help: 'process only resource with a given id');
+$parser->addArgument('--class', help: 'process only resource of a given class');
 $parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
 $parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
 $parser->addArgument('--user', help: 'user name used for repository authentication (not important if --test or --resolveOnly are used)');
 $parser->addArgument('--pswd', help: 'password used for repository authentication (not important if --test or --resolveOnly are used)');
 $parser->addArgument('--mode', default: 'parse', choices: array_keys($modes), help: "operation mode\n    - resolve - only try to resolve the external URI (finds broken external URIs)\n    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n    - update - updates the repository resource with data fetched from the external source\n");
 $parser->addArgument('--verbose', action: AP::ACTION_STORE_TRUE, help: 'provide more verbose output, especially print the data fetched from the external reference source');
-$parser->addArgument('--output', help: 'when used, the data to be saved to the repository are also saved in a TTL file');
+$parser->addArgument('--output', help: "when used, the data to be saved to the repository is also saved in a TTL file (the output isn't created in mode=resolve)");
 $parser->addArgument('cfgFile', help: 'path to the configuration file');
 $param       = $parser->parseArgs();
 $param->mode = $modes[$param->mode];
@@ -89,92 +91,122 @@ $dateFilter = !empty($param->after) ? $param->after : null;
 
 // Helper objects initialization
 $repo       = Repo::factoryFromUrl($param->repositoryUrl ?? $cfg->repositoryUrl ?? die("ARCHE repository URL unknown"), $guzzleOpts);
+$idProp     = $repo->getSchema()->id;
+$idPropNN   = DF::namedNode($idProp);
 $cache      = new UriNormalizerCache();
-$rules      = UriNormRules::getRules();
-$normalizer = new UriNormalizer($rules, cache: $cache);
+$normRules  = UriNormRules::getRules();
+$normalizer = new UriNormalizer($normRules);
+
 /* @var $source NamedEntityIteratorInterface */
 if (!empty($param->inputFile)) {
     $source = new NamedEntityIteratorFile($param->inputFile, $repo);
 } else {
     $source = new NamedEntityIteratorRepo($repo);
 }
-if (!empty($param->id)) {
-    $param->id = $normalizer->normalize($param->id);
-}
 
 // Fetch the data from external sources
-$outputMeta = new Dataset(false);
-foreach ($cfg->classes as $class => $cCfg) {
-    echo "\n### Processing resources of class $class\n\n";
-
-    //TODO - first resources should be collected,
-    //     - then all namespaces should be processed for a given resource
-    //     - then update should be performed
-    foreach ($cCfg as $namespace => $mappings) {
-        echo "\n  ### Processing resources in the $namespace namespace\n\n";
-
-        $normRule = array_filter($rules, fn($x) => $x->name === $namespace);
-        $normRule = array_pop($normRule) ?? die("Normalization rules unknown for the $namespace namespace");
-        $normRule = UriNormalizerRule::factory($normRule);
-        $db       = new UriNormalizer([$normRule], cache: $cache);
-        $idFilter = !empty($param->id) ? "^" . $param->id . "$" : $normRule->match;
-        $source->setFilter($class, $idFilter, $dateFilter, $param->limit);
-
-        $mappings = PropertyMapping::fromConfig($mappings);
-
-        foreach ($source->getNamedEntities() as $N => $namedEntity) {
-            /* @var $namedEntity NamedEntityInterface */
-            $N              = $N + 1;
-            $T              = $source->getCount();
-            $NN             = round(100 * $N / $T);
-            $namedEntityUri = DF::namedNode($namedEntity->getUri());
-            echo "    Resource $namedEntityUri ($N/$T $NN%)\n";
-
-            $ids = $namedEntity->getIdentifiers($normRule->match, $db);
-            if (count($ids) === 0) {
-                echo "      WARNING: no matching identifiers\n";
-                continue;
-            }
-
-            $newMeta = new Dataset(false);
-            foreach ($ids as $id) {
-                try {
-                    $dbMeta = $db->fetch($id);
-                } catch (Throwable $e) {
-                    echo "      ERROR: Failed to load data from $id with error: " . $e->getMessage() . "\n";
-                    continue;
-                }
-                if ($param->mode <= MODE_RESOLVE) {
-                    continue;
-                }
-
-                foreach ($mappings as $pCfg) {
-                    /* @var $pCfg PropertyMapping */
-                    $pCfg->merge($newMeta, $dbMeta, $namedEntityUri, $normalizer);
-                }
-            }
-            if (!empty($param->output)) {
-                $outputMeta->add($newMeta);
-            }
-            if ($param->mode <= MODE_PARSE) {
-                continue;
-            }
-            // ARCHE update goes here
-            try {
-                $namedEntity->updateMetadata(Util::asEasyRdfResource($newMeta, $namedEntity->getUri()), $param->mode <= MODE_TEST);
-                echo $param->verbose ? "      INFO: updated successfully\n" : "";
-            } catch (ClientException $ex) {
-                echo "      ERROR: " . (string) $ex->getResponse()->getBody() . "\n";
-            }
-        }
-    }
-}
-echo $param->verbose ? "\n### Collected metadata:\n\n$outputMeta\n" : '';
-if (!empty($param->output)) {
-    echo "\n### Writing collected metadata to $param->output\n";
+if (!empty($param->output) && $param->mode >= MODE_PARSE) {
     $nmsp = new quickRdf\RdfNamespace();
     foreach ($cfg->namespaces ?? [] as $alias => $prefix) {
         $nmsp->add($prefix, $alias);
     }
-    ioUtil::serialize($outputMeta, 'text/turtle', $param->output, $nmsp);
+    $output = fopen($param->output, 'w');
+}
+foreach ($cfg->classes as $class => $cCfg) {
+    if (!empty($param->class) && $class !== $param->class) {
+        continue;
+    }
+    echo "\n### Processing resources of class $class\n";
+
+    $extDbNames = array_keys(get_object_vars($cCfg));
+
+    $mappings = new PropertyMappings($normalizer, $idPropNN);
+    $idFilter = [];
+    foreach ($extDbNames as $extDbName) {
+        $rule = array_filter($normRules, fn($x) => $x->name === $extDbName);
+        if (count($rule) === 0) {
+            die("No normalization rules found for the '$extDbName' external reference database\n");
+        }
+        $rule       = UriNormalizerRule::factory(reset($rule));
+        $mappings->addExternalDatabase($extDbName, $rule, $cCfg->$extDbName);
+        $idFilter[] = $rule->match;
+    }
+
+    if (!empty($param->id)) {
+        $idFilter = "^" . $param->id . "$";
+    } else {
+        $idFilter = '(' . implode(')|(', $idFilter) . ')';
+    }
+    $source->setFilter($class, $idFilter, $dateFilter, $param->limit);
+
+    $N = 1;
+    foreach ($source->getNamedEntities() as $entity) {
+        /* @var NamedEntityInterface $entity */
+        $T  = $source->getCount();
+        $NN = round(100 * $N / $T);
+        echo "  " . $entity->getUri() . " ($N/$T $NN%)\n";
+        $N++;
+
+        // collect data from external databases
+        $entityExtMeta = [];
+        $idsToProcess  = $entity->getIdentifiers($normalizer);
+        $idsProcessed  = [];
+        while (count($idsToProcess) > 0) {
+            try {
+                $id                = array_pop($idsToProcess);
+                $idsProcessed[$id] = 1;
+                $id                = $normalizer->normalize($id);
+                $idsProcessed[$id] = 1;
+                // don't even try to resolve identifiers for which there's no mapping
+                $mappings->matchExternalDatabase($id);
+                echo "    fetching data for $id\n";
+                $meta              = AsRdfInterface::addDatasetNode($normalizer->fetch($id), new DF(), fn($x) => new DatasetNode(new Dataset(), $x));
+                $uriStr            = $meta->getNode()->getValue();
+                $extDbName         = $mappings->matchExternalDatabase($uriStr);
+                if (!isset($entityExtMeta[$extDbName])) {
+                    $entityExtMeta[$extDbName] = [];
+                } if (!isset($entityExtMeta[$extDbName][$uriStr])) {
+                    $entityExtMeta[$extDbName][$uriStr] = $meta;
+                    foreach ($mappings->mapIdentifiers($meta, $extDbName) as $i) {
+                        if (!isset($idsProcessed[$i]) && !in_array($i, $idsToProcess)) {
+                            $idsToProcess[] = $i;
+                        }
+                    }
+                }
+            } catch (RefSourcesException | UriNormalizerException $e) {
+                echo $param->verbose ? "      unsupported source: " . $e->getMessage() . "\n" : '';
+            }
+        }
+        if ($param->mode < MODE_RESOLVE) {
+            continue;
+        }
+
+        // update entiti's metadata
+        $entityMeta     = $entity->getMetadata();
+        $entityMetaOrig = $entityMeta->getDataset()->copy();
+        foreach ($extDbNames as $dbName) {
+            foreach ($entityExtMeta[$dbName] ?? [] as $extDbMeta) {
+                $mappings->resolveAndMerge($dbName, $entityMeta, $extDbMeta);
+            }
+        }
+        echo $param->verbose ? "    fetched data: \n      " . trim(str_replace("\n", "\n      ", (string) $entityMeta->getDataset()->copyExcept($entityMetaOrig))) . "\n" : '';
+
+        // save entity's metadata
+        if ($param->mode >= MODE_TEST) {
+            echo "  updating ARCHE resource " . ($param->mode === MODE_TEST ? '(test)' : '') . "\n";
+            try {
+                $merged = $entity->updateMetadata($entityMeta, $param->mode === MODE_TEST);
+                $merged = count($merged) > 0 ? '(merged with: ' . implode(', ', $merged) . ')' : '';
+                echo "    succeeded $merged\n";
+            } catch (\Exception $e) {
+                echo "    failed with: " . ($param->verbose ? print_r($e, true) : $e->getMessage()) . "\n";
+            }
+        }
+        if (isset($output)) {
+            ioUtil::serialize($entityMeta, 'text/turtle', $output, $nmsp);
+        }
+    }
+}
+if (isset($output)) {
+    fclose($output);
 }

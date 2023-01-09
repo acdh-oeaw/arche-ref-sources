@@ -1,4 +1,5 @@
-vendor
+/vendor
+/composer.lock
 /nbproject
-composer.lock
 /config.yaml
+/*.ttl*
