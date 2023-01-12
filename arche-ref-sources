@@ -64,7 +64,7 @@ $parser      = new AP(epilog: "Enriches metadata by fetching additional informat
 $parser->addArgument('--limit', type: AP::TYPE_INT, default: PHP_INT_MAX, help: 'limit number of processed resources');
 $parser->addArgument('--after', help: 'process only resources modified after a given date');
 $parser->addArgument('--id', help: 'process only resource with a given id');
-$parser->addArgument('--class', help: 'process only resource of a given class');
+$parser->addArgument('--extDbName', help: 'process only resource from a given external authority file');
 $parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
 $parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
 $parser->addArgument('--user', help: 'user name used for repository authentication (not important if --test or --resolveOnly are used)');
@@ -112,50 +112,54 @@ if (!empty($param->output) && $param->mode >= MODE_PARSE) {
     }
     $output = fopen($param->output, 'w');
 }
-foreach ($cfg->classes as $class => $cCfg) {
-    if (!empty($param->class) && $class !== $param->class) {
+
+$mappings = new PropertyMappings($normalizer, $idPropNN);
+foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
+    $rule = array_filter($normRules, fn($x) => $x->name === $extDbName);
+    if (count($rule) === 0) {
+        die("No normalization rules found for the '$extDbName' external reference database\n");
+    }
+    $rule = UriNormalizerRule::factory(reset($rule));
+    $mappings->addExternalDatabase($extDbName, $rule);
+    foreach ($extDbCfg as $class => $cCfg) {
+        $mappings->addExternalDatabaseClass($extDbName, $class, $cCfg);
+    }
+}
+
+$processed = [];
+$idFilter  = "^" . $param->id . "$";
+foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
+    if (!empty($param->extDbName) && $extDbName !== $param->extDbName) {
         continue;
     }
-    echo "\n### Processing resources of class $class\n";
+    echo "\n### Processing resources from $extDbName\n";
 
-    $extDbNames = array_keys(get_object_vars($cCfg));
-
-    $mappings = new PropertyMappings($normalizer, $idPropNN);
-    $idFilter = [];
-    foreach ($extDbNames as $extDbName) {
-        $rule = array_filter($normRules, fn($x) => $x->name === $extDbName);
-        if (count($rule) === 0) {
-            die("No normalization rules found for the '$extDbName' external reference database\n");
-        }
-        $rule       = UriNormalizerRule::factory(reset($rule));
-        $mappings->addExternalDatabase($extDbName, $rule, $cCfg->$extDbName);
-        $idFilter[] = $rule->match;
+    if (empty($param->id)) {
+        $idFilter = $mappings->getRule($extDbName)->match;
     }
-
-    if (!empty($param->id)) {
-        $idFilter = "^" . $param->id . "$";
-    } else {
-        $idFilter = '(' . implode(')|(', $idFilter) . ')';
-    }
-    $source->setFilter($class, $idFilter, $dateFilter, $param->limit);
+    $source->setFilter(null, $idFilter, $dateFilter, $param->limit);
 
     $N = 1;
     foreach ($source->getNamedEntities() as $entity) {
         /* @var NamedEntityInterface $entity */
-        $T  = $source->getCount();
-        $NN = round(100 * $N / $T);
-        echo "  " . $entity->getUri() . " ($N/$T $NN%)\n";
+        $NT = $source->getCount();
+        $NN = round(100 * $N / $NT);
+        echo "  " . $entity->getUri() . " ($N/$NT $NN%)\n";
         $N++;
 
-        // collect data from external databases
+        $entityUri = $entity->getUri();
+        if (isset($processed[$entityUri])) {
+            continue;
+        }
+        $processed[$entity->getUri()] = 1;
+
+        // collect data from all external databases reachable from this entity
         $entityExtMeta = [];
         $idsToProcess  = $entity->getIdentifiers($normalizer);
         $idsProcessed  = [];
         while (count($idsToProcess) > 0) {
             try {
                 $id                = array_pop($idsToProcess);
-                $idsProcessed[$id] = 1;
-                $id                = $normalizer->normalize($id);
                 $idsProcessed[$id] = 1;
                 // don't even try to resolve identifiers for which there's no mapping
                 $mappings->matchExternalDatabase($id);
@@ -184,18 +188,27 @@ foreach ($cfg->classes as $class => $cCfg) {
         // update entiti's metadata
         $entityMeta     = $entity->getMetadata();
         $entityMetaOrig = $entityMeta->getDataset()->copy();
-        foreach ($extDbNames as $dbName) {
-            foreach ($entityExtMeta[$dbName] ?? [] as $extDbMeta) {
-                $mappings->resolveAndMerge($dbName, $entityMeta, $extDbMeta);
+        foreach ($entityExtMeta as $extDbName => $extDbMetas) {
+            foreach ($extDbMetas as $extDbMeta) {
+                try {
+                    $mappings->resolveAndMerge($extDbName, $entityMeta, $extDbMeta);
+                } catch (RefSourcesException $e) {
+                    echo $param->verbose ? "      " . $e->getMessage() . "\n" : '';
+                }
             }
         }
-        echo $param->verbose ? "    fetched data: \n      " . trim(str_replace("\n", "\n      ", (string) $entityMeta->getDataset()->copyExcept($entityMetaOrig))) . "\n" : '';
+
+        $newData = $entityMeta->getDataset()->copyExcept($entityMetaOrig);
+        echo $param->verbose ? "    fetched data: \n      " . trim(str_replace("\n", "\n      ", (string) $newData)) . "\n" : '';
 
         // save entity's metadata
-        if ($param->mode >= MODE_TEST) {
+        if ($param->mode >= MODE_TEST && count($newData) > 0) {
             echo "  updating ARCHE resource " . ($param->mode === MODE_TEST ? '(test)' : '') . "\n";
             try {
                 $merged = $entity->updateMetadata($entityMeta, $param->mode === MODE_TEST);
+                foreach ($merged as $i) {
+                    $processed[$i] = 1;
+                }
                 $merged = count($merged) > 0 ? '(merged with: ' . implode(', ', $merged) . ')' : '';
                 echo "    succeeded $merged\n";
             } catch (\Exception $e) {

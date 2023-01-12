@@ -70,6 +70,7 @@ class PropertyMapping {
     private int $maxPerLang;
     private string $match;
     private string $skip;
+    private iTerm $value;
 
     /**
      * 
@@ -79,13 +80,17 @@ class PropertyMapping {
     private DF $termsFactory;
 
     public function __construct(object $cfg) {
-        $this->property     = DF::namedNode($cfg->property);
-        $this->action       = $cfg->action;
-        $this->type         = $cfg->type;
-        $this->langProcess  = $cfg->langProcess ?? self::LANG_PASS;
-        $this->langValue    = $cfg->langValue ?? '';
-        $this->maxPerLang   = $cfg->maxPerLang ?? PHP_INT_MAX;
-        $this->path         = array_map(fn($x) => DF::namedNode($x), $cfg->path);
+        $this->property    = DF::namedNode($cfg->property);
+        $this->action      = $cfg->action;
+        $this->type        = $cfg->type;
+        $this->langProcess = $cfg->langProcess ?? self::LANG_PASS;
+        $this->langValue   = $cfg->langValue ?? '';
+        $this->maxPerLang  = $cfg->maxPerLang ?? PHP_INT_MAX;
+        if (!empty($cfg->value)) {
+            $this->value = $cfg->type === 'resource' ? DF::namedNode($cfg->value) : DF::literal($cfg->value);
+        } else {
+            $this->path = array_map(fn($x) => DF::namedNode($x), $cfg->path);
+        }
         $this->match        = $cfg->match ?? '';
         $this->skip         = $cfg->skip ?? '';
         $this->termsFactory = new DF();
@@ -147,11 +152,15 @@ class PropertyMapping {
      */
     public function resolvePath(iDatasetNode $meta, UriNormalizer $normalizer,
                                 ?iTerm $subject = null): iDatasetNode {
-        // fetch triples
-        $data    = $this->resolveRecursively($meta->getDataset(), $meta->getNode(), $normalizer, $this->path);
-        // fix their subject and map the predicate
         $subject ??= $meta->getNode();
-        $data->forEach(fn(iQuad $x) => $x->withSubject($subject)->withPredicate($this->property));
+        if (!empty($this->value)) {
+            $data = new Dataset();
+            $data->add(DF::quad($subject, $this->property, $this->value));
+        } else {
+            $data = $this->resolveRecursively($meta->getDataset(), $meta->getNode(), $normalizer, $this->path);
+            // fix their subject and map the predicate
+            $data->forEach(fn(iQuad $x) => $x->withSubject($subject)->withPredicate($this->property));
+        }
         return $meta->withDataset($data)->withNode($subject);
     }
 

@@ -26,7 +26,6 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use EasyRdf\Resource;
 use quickRdf\Dataset;
 use quickRdf\DataFactory;
 use termTemplates\QuadTemplate as QT;
@@ -36,7 +35,6 @@ use quickRdfIo\Util as ioUtil;
 use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\Repo;
-use acdhOeaw\arche\lib\RepoResource;
 
 /**
  * Description of NamedEntityIteratorFile

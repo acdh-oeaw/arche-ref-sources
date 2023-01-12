@@ -31,6 +31,10 @@ use rdfInterface\NamedNodeInterface;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerRule;
 use acdhOeaw\UriNormalizerException;
+use zozlak\RdfConstants as RDF;
+use termTemplates\QuadTemplate as QT;
+use quickRdf\DataFactory as DF;
+use rdfInterface\QuadInterface as iQuad;
 
 /**
  * Description of PropertyMappings
@@ -61,19 +65,35 @@ class PropertyMappings {
     }
 
     /**
+     * Adds URI normalization rule for a given external database.
      * 
      * @param string $dbName
      * @param UriNormalizerRule $rule
+     * @return void
+     */
+    public function addExternalDatabase(string $dbName, UriNormalizerRule $rule): void {
+        $this->rules[$dbName] = $rule;
+    }
+
+    /**
+     * Adds property mappings for a given class of a given external database.
+     * 
+     * @param string $dbName
+     * @param string $class
      * @param array<mixed> $mappings
      * @return void
      */
-    public function addExternalDatabase(string $dbName, UriNormalizerRule $rule,
-                                        array $mappings): void {
-        $this->rules[$dbName]    = $rule;
-        $this->mappings[$dbName] = [];
+    public function addExternalDatabaseClass(string $dbName, string $class,
+                                             array $mappings): void {
+        $id                  = $this->getId($dbName, $class);
+        $this->mappings[$id] = [];
         foreach ($mappings as $i) {
-            $this->mappings[$dbName][] = new PropertyMapping($i);
+            $this->mappings[$id][] = new PropertyMapping($i);
         }
+    }
+
+    public function getRule(string $dbName): UriNormalizerRule {
+        return $this->rules[$dbName];
     }
 
     /**
@@ -82,12 +102,18 @@ class PropertyMappings {
      */
     public function mapIdentifiers(DatasetNodeInterface $meta,
                                    ?string $dbName = null): array {
-        $dbName ??= $this->matchExternalDatabase($meta->getNode()->getValue());
-        $ids    = [];
-        foreach ($this->mappings[$dbName] as $mapping) {
-            if ($mapping->getProperty()->equals($this->idProp)) {
-                foreach ($mapping->resolve($meta, $this->normalizer, true) as $idQuad) {
-                    $ids[] = $idQuad->getObject()->getValue();
+        $classes = $this->getClasses($meta, $dbName);
+        $ids     = [];
+        foreach ($classes as $class) {
+            foreach ($this->mappings[$class] as $mapping) {
+                if ($mapping->getProperty()->equals($this->idProp)) {
+                    foreach ($mapping->resolve($meta, $this->normalizer, true) as $idQuad) {
+                        try {
+                            $ids[] = $this->normalizer->normalize($idQuad->getObject()->getValue(), true);
+                        } catch (UriNormalizerException) {
+                            
+                        }
+                    }
                 }
             }
         }
@@ -105,11 +131,32 @@ class PropertyMappings {
 
     public function resolveAndMerge(string $dbName, DatasetNodeInterface $meta,
                                     DatasetNodeInterface $extDbMeta): void {
-        if (!isset($this->mappings[$dbName])) {
-            throw new RefSourcesException("No mappings defined for the external database '$dbName'");
+        $classes = $this->getClasses($extDbMeta, $dbName);
+        if (count($classes) === 0) {
+            throw new RefSourcesException("No mappings found for the external database '$dbName'");
         }
-        foreach ($this->mappings[$dbName] as $mapping) {
-            $mapping->resolveAndMerge($meta, $extDbMeta, $this->normalizer, $this->idProp === $mapping->getProperty());
+        foreach ($classes as $class) {
+            foreach ($this->mappings[$class] as $mapping) {
+                $mapping->resolveAndMerge($meta, $extDbMeta, $this->normalizer, $this->idProp === $mapping->getProperty());
+            }
         }
+    }
+
+    private function getId(string $dbName, string $class): string {
+        return $dbName . '|' . $class;
+    }
+
+    /**
+     * 
+     * @param DatasetNodeInterface $meta
+     * @param string|null $dbName
+     * @return array<string>
+     */
+    private function getClasses(DatasetNodeInterface $meta, ?string $dbName): array {
+        $dbName  ??= $this->matchExternalDatabase($meta->getNode()->getValue());
+        $classes = $meta->getDataset()->copy(new QT($meta->getNode(), DF::namedNode(RDF::RDF_TYPE)));
+        $classes = array_map(fn(iQuad $x) => $this->getId($dbName, $x->getObject()->getValue()), iterator_to_array($classes));
+        $classes = array_intersect($classes, array_keys($this->mappings));
+        return $classes;
     }
 }
