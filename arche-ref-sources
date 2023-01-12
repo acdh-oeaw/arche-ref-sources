@@ -88,7 +88,7 @@ echo "### Started (" . date("Y-m-d H:i:s") . ")\n";
 if ($param->verbose) {
     $tmp       = clone($param);
     $tmp->pswd = '***';
-    print_r($param);
+    print_r($tmp);
 }
 
 // Configuration initialization
@@ -161,6 +161,7 @@ foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
 
         $entityUri = $entity->getUri();
         if (isset($processed[$entityUri])) {
+            echo "    already processed\n";
             continue;
         }
         $processed[$entity->getUri()] = 1;
