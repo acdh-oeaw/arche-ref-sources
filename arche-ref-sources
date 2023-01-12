@@ -63,6 +63,7 @@ $modes       = [
 $parser      = new AP(epilog: "Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\nWhich resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.");
 $parser->addArgument('--limit', type: AP::TYPE_INT, default: PHP_INT_MAX, help: 'limit number of processed resources');
 $parser->addArgument('--after', help: 'process only resources modified after a given date');
+$parser->addArgument('--afterFile', help: 'process only resources modified after a date stored in a given file and updates the file content at the end');
 $parser->addArgument('--id', help: 'process only resource with a given id');
 $parser->addArgument('--extDbName', help: 'process only resource from a given external authority file');
 $parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
@@ -77,6 +78,17 @@ $param       = $parser->parseArgs();
 $param->mode = $modes[$param->mode];
 if (!file_exists($param->cfgFile)) {
     exit("Configuration file " . $param->cfgFile . " doesn't exist\n");
+}
+if (!empty($param->afterFile)) {
+    if (file_exists($param->afterFile)) {
+        $param->after = trim(file_get_contents($param->afterFile));
+    }
+}
+echo "### Started (" . date("Y-m-d H:i:s") . ")\n";
+if ($param->verbose) {
+    $tmp       = clone($param);
+    $tmp->pswd = '***';
+    print_r($param);
 }
 
 // Configuration initialization
@@ -132,7 +144,7 @@ foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
     if (!empty($param->extDbName) && $extDbName !== $param->extDbName) {
         continue;
     }
-    echo "\n### Processing resources from $extDbName\n";
+    echo "### Processing resources from $extDbName\n";
 
     if (empty($param->id)) {
         $idFilter = $mappings->getRule($extDbName)->match;
@@ -223,3 +235,7 @@ foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
 if (isset($output)) {
     fclose($output);
 }
+if (!empty($param->afterFile)) {
+    file_put_contents($param->afterFile, date("Y-m-d H:i:s"));
+}
+echo "### Ended (" . date("Y-m-d H:i:s") . ")\n";

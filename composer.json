@@ -41,5 +41,5 @@
     "bin": [
         "arche-ref-sources"
     ],
-    "minimum-stability": "dev"
+    "minimum-stability": "RC"
 }
