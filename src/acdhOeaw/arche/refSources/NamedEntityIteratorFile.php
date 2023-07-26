@@ -27,10 +27,10 @@
 namespace acdhOeaw\arche\refSources;
 
 use quickRdf\Dataset;
+use quickRdf\DatasetNode;
 use quickRdf\DataFactory;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\ValueTemplate as VT;
-use rdfHelpers\DatasetNode;
 use quickRdfIo\Util as ioUtil;
 use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Schema;
@@ -46,8 +46,17 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
     private Dataset $graph;
     private Schema $schema;
     private Repo $repo;
+
+    /**
+     * 
+     * @var array<\termTemplates\QuadTemplate>
+     */
     private array $filters = [];
     private ?int $limit   = null;
+    /**
+     * 
+     * @var array<\rdfInterface\TermInterface>
+     */
     private array $matching;
 
     public function __construct(string $rdfFilePath, Repo $repo) {
@@ -79,7 +88,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
         }
         foreach ($this->matching as $i) {
             $meta = $this->graph->copy(new QT($i));
-            $meta = new DatasetNode($meta, $i);
+            $meta = DatasetNode::factory($i)->withDataset($meta);
             yield new NamedEntityFile($meta, $this, $this->repo);
         }
     }

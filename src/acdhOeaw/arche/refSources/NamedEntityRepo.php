@@ -26,13 +26,13 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use quickRdf\Dataset;
 use quickRdf\DataFactory;
-use rdfHelpers\DatasetNode;
+use quickRdf\DatasetNode;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
+use rdfInterface\DatasetNodeInterface;
 use rdfInterface2easyRdf\AsRdfInterface;
 
 /**
@@ -52,11 +52,11 @@ class NamedEntityRepo implements NamedEntityInterface {
         $this->repo = $res->getRepo();
     }
 
-    public function getMetadata(): DatasetNode {
+    public function getMetadata(): DatasetNodeInterface {
         return AsRdfInterface::addDatasetNode(
                 $this->res->getMetadata(),
                 new DataFactory(),
-                fn($x) => new DatasetNode(new Dataset(), $x)
+                fn($x) => DatasetNode::factory($x)
         );
     }
 

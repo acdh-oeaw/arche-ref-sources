@@ -28,9 +28,9 @@
 use zozlak\argparse\ArgumentParser as AP;
 use quickRdf\DataFactory as DF;
 use quickRdf\Dataset;
+use quickRdf\DatasetNode;
 use quickRdfIo\Util as ioUtil;
 use rdfInterface2easyRdf\AsRdfInterface;
-use rdfHelpers\DatasetNode;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormRules;
 use acdhOeaw\UriNormalizerRule;
@@ -68,8 +68,8 @@ $parser->addArgument('--id', help: 'process only resource with a given id');
 $parser->addArgument('--extDbName', help: 'process only resource from a given external authority file');
 $parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
 $parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
-$parser->addArgument('--user', help: 'user name used for repository authentication (not important if --test or --resolveOnly are used)');
-$parser->addArgument('--pswd', help: 'password used for repository authentication (not important if --test or --resolveOnly are used)');
+$parser->addArgument('--user', help: 'user name used for repository authentication (not important in mode "test", "parse" and "resolve")');
+$parser->addArgument('--pswd', help: 'password used for repository authentication (not important in mode "test", "parse" and "resolve")');
 $parser->addArgument('--mode', default: 'parse', choices: array_keys($modes), help: "operation mode\n    - resolve - only try to resolve the external URI (finds broken external URIs)\n    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n    - update - updates the repository resource with data fetched from the external source\n");
 $parser->addArgument('--verbose', action: AP::ACTION_STORE_TRUE, help: 'provide more verbose output, especially print the data fetched from the external reference source');
 $parser->addArgument('--output', help: "when used, the data to be saved to the repository is also saved in a TTL file (the output isn't created in mode=resolve)");
@@ -177,7 +177,7 @@ foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
                 // don't even try to resolve identifiers for which there's no mapping
                 $mappings->matchExternalDatabase($id);
                 echo "    fetching data for $id\n";
-                $meta              = AsRdfInterface::addDatasetNode($normalizer->fetch($id), new DF(), fn($x) => new DatasetNode(new Dataset(), $x));
+                $meta              = AsRdfInterface::addDatasetNode($normalizer->fetch($id), new DF(), fn($x) => new DatasetNode($x));
                 $uriStr            = $meta->getNode()->getValue();
                 $extDbName         = $mappings->matchExternalDatabase($uriStr);
                 if (!isset($entityExtMeta[$extDbName])) {

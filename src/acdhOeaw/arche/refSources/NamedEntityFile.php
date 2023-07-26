@@ -27,7 +27,7 @@
 namespace acdhOeaw\arche\refSources;
 
 use quickRdf\DataFactory as DF;
-use rdfHelpers\DatasetNode;
+use quickRdf\DatasetNode;
 use termTemplates\QuadTemplate as QT;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;

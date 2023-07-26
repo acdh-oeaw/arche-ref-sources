@@ -27,8 +27,8 @@
 namespace acdhOeaw\arche\refSources;
 
 use quickRdf\DataFactory;
-use rdfHelpers\DatasetNode;
 use acdhOeaw\arche\lib\RepoResource;
+use rdfInterface\DatasetNodeInterface;
 use rdfInterface2easyRdf\AsEasyRdf;
 use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\SearchTerm;
@@ -45,7 +45,13 @@ trait NamedEntityTrait {
 
     private Repo $repo;
 
-    public function updateMetadata(DatasetNode $meta, bool $test = true): array {
+    /**
+     * 
+     * @param DatasetNodeInterface $meta
+     * @param bool $test
+     * @return array<string>
+     */
+    public function updateMetadata(DatasetNodeInterface $meta, bool $test = true): array {
         if ($this->repo->inTransaction()) {
             $this->repo->rollback();
         }

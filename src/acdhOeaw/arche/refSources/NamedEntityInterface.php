@@ -27,7 +27,7 @@
 namespace acdhOeaw\arche\refSources;
 
 use acdhOeaw\UriNormalizer;
-use rdfHelpers\DatasetNode;
+use rdfInterface\DatasetNodeInterface;
 
 /**
  *
@@ -44,7 +44,12 @@ interface NamedEntityInterface {
      */
     public function getIdentifiers(UriNormalizer $normalizer): array;
 
-    public function getMetadata(): DatasetNode;
+    public function getMetadata(): DatasetNodeInterface;
 
-    public function updateMetadata(DatasetNode $meta): array;
+    /**
+     * 
+     * @param DatasetNodeInterface $meta
+     * @return array<string>
+     */
+    public function updateMetadata(DatasetNodeInterface $meta): array;
 }

@@ -34,7 +34,7 @@ use acdhOeaw\UriNormalizerException;
 use zozlak\RdfConstants as RDF;
 use termTemplates\QuadTemplate as QT;
 use quickRdf\DataFactory as DF;
-use rdfInterface\QuadInterface as iQuad;
+use rdfInterface\QuadInterface;
 
 /**
  * Description of PropertyMappings
@@ -98,7 +98,7 @@ class PropertyMappings {
 
     /**
      * 
-     * @return array<NamedNodeInterface>
+     * @return array<string>
      */
     public function mapIdentifiers(DatasetNodeInterface $meta,
                                    ?string $dbName = null): array {
@@ -155,7 +155,7 @@ class PropertyMappings {
     private function getClasses(DatasetNodeInterface $meta, ?string $dbName): array {
         $dbName  ??= $this->matchExternalDatabase($meta->getNode()->getValue());
         $classes = $meta->getDataset()->copy(new QT($meta->getNode(), DF::namedNode(RDF::RDF_TYPE)));
-        $classes = array_map(fn(iQuad $x) => $this->getId($dbName, $x->getObject()->getValue()), iterator_to_array($classes));
+        $classes = array_map(fn(QuadInterface $x) => $this->getId($dbName, $x->getObject()->getValue()), iterator_to_array($classes));
         $classes = array_intersect($classes, array_keys($this->mappings));
         return $classes;
     }
