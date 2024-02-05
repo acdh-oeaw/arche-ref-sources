@@ -27,10 +27,8 @@
 
 use zozlak\argparse\ArgumentParser as AP;
 use quickRdf\DataFactory as DF;
-use quickRdf\Dataset;
 use quickRdf\DatasetNode;
 use quickRdfIo\Util as ioUtil;
-use rdfInterface2easyRdf\AsRdfInterface;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormRules;
 use acdhOeaw\UriNormalizerRule;
@@ -177,7 +175,7 @@ foreach ($cfg->referenceSources as $extDbName => $extDbCfg) {
                 // don't even try to resolve identifiers for which there's no mapping
                 $mappings->matchExternalDatabase($id);
                 echo "    fetching data for $id\n";
-                $meta              = AsRdfInterface::addDatasetNode($normalizer->fetch($id), new DF(), fn($x) => new DatasetNode($x));
+                $meta              = $normalizer->fetch($id);
                 $uriStr            = $meta->getNode()->getValue();
                 $extDbName         = $mappings->matchExternalDatabase($uriStr);
                 if (!isset($entityExtMeta[$extDbName])) {

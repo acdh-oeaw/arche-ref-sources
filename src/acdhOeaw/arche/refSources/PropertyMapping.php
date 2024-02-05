@@ -33,13 +33,10 @@ use rdfInterface\TermInterface;
 use rdfInterface\QuadInterface;
 use rdfInterface\DatasetInterface;
 use rdfInterface\DatasetNodeInterface;
-use rdfInterface2easyRdf\AsRdfInterface;
 use quickRdf\Dataset;
 use quickRdf\DataFactory as DF;
-use quickRdf\DatasetNode;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\NamedNodeTemplate;
-use termTemplates\ValueTemplate;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
 
@@ -76,7 +73,6 @@ class PropertyMapping {
      * @var array<NamedNodeInterface>
      */
     private array $path;
-    private DF $termsFactory;
 
     public function __construct(object $cfg) {
         $this->property    = DF::namedNode($cfg->property);
@@ -92,7 +88,6 @@ class PropertyMapping {
         }
         $this->match        = $cfg->match ?? '';
         $this->skip         = $cfg->skip ?? '';
-        $this->termsFactory = new DF();
     }
 
     public function resolveAndMerge(DatasetNodeInterface $meta,
@@ -245,7 +240,7 @@ class PropertyMapping {
         if (count($path) < 2) {
             return $meta->copy(new QT($sbj, $path[0]));
         }
-        $nnt    = new NamedNodeTemplate(null, ValueTemplate::ANY);
+        $nnt    = new NamedNodeTemplate(null, NamedNodeTemplate::ANY);
         $prop   = array_shift($path);
         $values = new Dataset();
         foreach ($meta->listObjects(new QT($sbj, $prop, $nnt)) as $newSbj) {
@@ -256,7 +251,6 @@ class PropertyMapping {
                 // just empty object - try to resolve it
                 try {
                     $newMeta = $normalizer->fetch($newSbj->getValue());
-                    $newMeta = AsRdfInterface::addDataset($newMeta, $this->termsFactory, new Dataset());
                     if ($newMeta !== null) {
                         $values->union($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
                     }

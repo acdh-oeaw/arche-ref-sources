@@ -12,18 +12,17 @@
         }
     ],
     "require": {
-        "php": ">=8",
-        "guzzlehttp/guzzle": "^7",
-        "acdh-oeaw/arche-lib": "^5",
+        "php": ">=8 <8.3",
         "psr/log": "^3",
-        "acdh-oeaw/arche-assets": "^3.8.1",
-        "acdh-oeaw/uri-normalizer": "^2",
         "zozlak/argparse": "^1",
-        "sweetrdf/quick-rdf-io": "^1",
-        "sweetrdf/quick-rdf": "^2.0.0-RC1",
-        "sweetrdf/rdf-interface": "^2.0.0-RC1",
-        "sweetrdf/term-templates": "^1",
-        "sweetrdf/rdfinterface2easyrdf": "^0.3"
+        "acdh-oeaw/arche-assets": "^3.8.1",
+        "acdh-oeaw/arche-lib": "dev-rdfInterface",
+        "acdh-oeaw/uri-normalizer": "dev-master",
+        "sweetrdf/quick-rdf-io": "dev-master",
+        "sweetrdf/quick-rdf": "dev-master",
+        "sweetrdf/rdf-interface": "dev-master",
+        "sweetrdf/term-templates": "dev-dev",
+        "sweetrdf/rdf-helpers": "dev-dev"
     },
     "autoload": {
         "psr-4": {

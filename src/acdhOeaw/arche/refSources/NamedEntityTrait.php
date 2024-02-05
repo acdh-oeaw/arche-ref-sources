@@ -29,7 +29,6 @@ namespace acdhOeaw\arche\refSources;
 use quickRdf\DataFactory;
 use acdhOeaw\arche\lib\RepoResource;
 use rdfInterface\DatasetNodeInterface;
-use rdfInterface2easyRdf\AsEasyRdf;
 use termTemplates\QuadTemplate as QT;
 use acdhOeaw\arche\lib\SearchTerm;
 use acdhOeaw\arche\lib\SearchConfig;
@@ -90,12 +89,10 @@ trait NamedEntityTrait {
             }
 
             // update the main resource
-            $meta = AsEasyRdf::asResource($meta);
             $mainRes->setMetadata($meta);
             $mainRes->updateMetadata(RepoResource::UPDATE_MERGE);
         } catch (NotFound) {
             $this->repo->begin();
-            $meta = AsEasyRdf::asResource($meta);
             $this->repo->createResource($meta);
         }
         if ($test) {

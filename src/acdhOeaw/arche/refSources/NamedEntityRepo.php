@@ -26,14 +26,12 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use quickRdf\DataFactory;
-use quickRdf\DatasetNode;
+use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
 use rdfInterface\DatasetNodeInterface;
-use rdfInterface2easyRdf\AsRdfInterface;
 
 /**
  * Description of RefResourceRepo
@@ -53,11 +51,7 @@ class NamedEntityRepo implements NamedEntityInterface {
     }
 
     public function getMetadata(): DatasetNodeInterface {
-        return AsRdfInterface::addDatasetNode(
-                $this->res->getMetadata(),
-                new DataFactory(),
-                fn($x) => DatasetNode::factory($x)
-        );
+        return $this->res->getMetadata();
     }
 
     /**
@@ -68,7 +62,7 @@ class NamedEntityRepo implements NamedEntityInterface {
     public function getIdentifiers(UriNormalizer $normalizer): array {
         $idProp = $this->repo->getSchema()->id;
         $ids    = [];
-        foreach ($this->res->getGraph()->allResources($idProp) as $id) {
+        foreach ($this->res->getGraph()->listObjects(new PT($idProp)) as $id) {
             try {
                 $ids[] = $normalizer->normalize((string) $id, true);
             } catch (UriNormalizerException) {

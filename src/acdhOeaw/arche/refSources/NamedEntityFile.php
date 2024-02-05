@@ -26,8 +26,8 @@
 
 namespace acdhOeaw\arche\refSources;
 
+use rdfInterface\DatasetNodeInterface;
 use quickRdf\DataFactory as DF;
-use quickRdf\DatasetNode;
 use termTemplates\QuadTemplate as QT;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
@@ -42,18 +42,18 @@ class NamedEntityFile implements NamedEntityInterface {
 
     use NamedEntityTrait;
 
-    private DatasetNode $node;
+    private DatasetNodeInterface $node;
     private NamedEntityIteratorFile $iter;
     private Repo $repo;
 
-    public function __construct(DatasetNode $node,
+    public function __construct(DatasetNodeInterface $node,
                                 NamedEntityIteratorFile $iter, Repo $repo) {
         $this->node = $node;
         $this->iter = $iter;
         $this->repo = $repo;
     }
 
-    public function getMetadata(): DatasetNode {
+    public function getMetadata(): DatasetNodeInterface {
         return $this->node;
     }
 
