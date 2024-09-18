@@ -31,7 +31,6 @@ use quickRdf\DataFactory as DF;
 use termTemplates\QuadTemplate as QT;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
-use acdhOeaw\arche\lib\Repo;
 
 /**
  * Description of RefResourceFile
@@ -44,13 +43,11 @@ class NamedEntityFile implements NamedEntityInterface {
 
     private DatasetNodeInterface $node;
     private NamedEntityIteratorFile $iter;
-    private Repo $repo;
 
     public function __construct(DatasetNodeInterface $node,
-                                NamedEntityIteratorFile $iter, Repo $repo) {
+                                NamedEntityIteratorFile $iter) {
         $this->node = $node;
         $this->iter = $iter;
-        $this->repo = $repo;
     }
 
     public function getMetadata(): DatasetNodeInterface {

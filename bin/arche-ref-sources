@@ -1,0 +1,152 @@
+#!/usr/bin/php
+<?php
+
+/*
+ * The MIT License
+ *
+ * Copyright 2021 Austrian Centre for Digital Humanities.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+use Psr\Log\LogLevel;
+use zozlak\argparse\ArgumentParser as AP;
+use zozlak\logging\Log;
+use quickRdf\DataFactory as DF;
+use quickRdf\DatasetNode;
+use quickRdfIo\Util as ioUtil;
+use acdhOeaw\UriNormalizer;
+use acdhOeaw\UriNormRules;
+use acdhOeaw\UriNormalizerRule;
+use acdhOeaw\UriNormalizerCache;
+use acdhOeaw\UriNormalizerException;
+use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\refSources\Crawler;
+use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
+use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
+use acdhOeaw\arche\refSources\NamedEntityIteratorInterface;
+
+$incDir = __DIR__;
+while ($incDir !== '/' && !file_exists($incDir . '/vendor/autoload.php')) {
+    $incDir = dirname($incDir);
+}
+require_once $incDir . '/vendor/autoload.php';
+
+const MODE_RESOLVE = 1;
+const MODE_PARSE = 2;
+const MODE_TEST = 3;
+const MODE_UPDATE = 4;
+
+$modes       = [
+    'resolve' => MODE_RESOLVE,
+    'parse'   => MODE_PARSE,
+    'test'    => MODE_TEST,
+    'update'  => MODE_UPDATE,
+];
+$parser      = new AP(epilog: "Enriches metadata by fetching additional information from external reference sources (GND, geonames, etc.)\nWhich resource classes are processed, which external reference sources are used and which properties are fetched from them is driven by the configuration file.");
+$parser->addArgument('--limit', type: AP::TYPE_INT, default: PHP_INT_MAX, help: 'limit number of processed resources');
+$parser->addArgument('--after', help: 'process only resources modified after a given date');
+$parser->addArgument('--afterFile', help: 'process only resources modified after a date stored in a given file and updates the file content at the end');
+$parser->addArgument('--id', help: 'process only resource with a given id');
+$parser->addArgument('--extDbName', help: 'process only resource from a given external authority file');
+$parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
+$parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
+$parser->addArgument('--user', help: 'user name used for repository authentication (not important in mode "test", "parse" and "resolve")');
+$parser->addArgument('--pswd', help: 'password used for repository authentication (not important in mode "test", "parse" and "resolve")');
+$parser->addArgument('--mode', default: 'parse', choices: array_keys($modes), help: "operation mode\n    - resolve - only try to resolve the external URI (finds broken external URIs)\n    - parse [default] - resolve the external URI and parse the output (when used with --verbose and/or --output it allows to inspect the data provided by the external source and test the metadata mapping defined in the configuration file)\n    - test - tries to update the repository resource with data fetched from the external source (so doorkeeper checks are performed) but rolls back the update no matter if it was successful or not\n    - update - updates the repository resource with data fetched from the external source\n");
+$parser->addArgument('--verbose', action: AP::ACTION_STORE_TRUE, help: 'provide more verbose output, especially print the data fetched from the external reference source');
+$parser->addArgument('--output', help: "when used, the data to be saved to the repository is also saved in a TTL file (the output isn't created in mode=resolve)");
+$parser->addArgument('cfgFile', help: 'path to the configuration file');
+$param       = $parser->parseArgs();
+$param->mode = $modes[$param->mode];
+if (!file_exists($param->cfgFile)) {
+    exit("Configuration file " . $param->cfgFile . " doesn't exist\n");
+}
+$log = new Log('php://stdout', $param->verbose ? LogLevel::DEBUG : LogLevel::INFO);
+$log->info("### Started");
+if ($param->verbose) {
+    $tmp       = clone($param);
+    $tmp->pswd = '***';
+    $log->info(print_r($tmp, true));
+}
+
+// Configuration initialization
+$cfg = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
+if (!empty($param->extDbName)) {
+    $cfg->referenceSources = (object) array_filter((array) $cfg->referenceSources, fn($v, $k) => $k === $param->extDbName, ARRAY_FILTER_USE_BOTH);
+}
+// Repo object initialization
+$guzzleOpts = [
+    'auth' => [
+        $param->user ?? $cfg->auth->user ?? '',
+        $param->pswd ?? $cfg->auth->password ?? '',
+    ],
+];
+$repo       = Repo::factoryFromUrl($param->repositoryUrl ?? $cfg->repositoryUrl ?? die("ARCHE repository URL unknown"), $guzzleOpts);
+// Output initialization
+if (!empty($param->output) && $param->mode >= MODE_PARSE) {
+    $nmsp = new quickRdf\RdfNamespace();
+    foreach ($cfg->namespaces ?? [] as $alias => $prefix) {
+        $nmsp->add($prefix, $alias);
+    }
+    $output = fopen($param->output, 'w');
+}
+
+// Crawl
+/* @var $source NamedEntityIteratorInterface */
+if (!empty($param->inputFile)) {
+    $source = new NamedEntityIteratorFile($param->inputFile, $repo->getSchema());
+} else {
+    $source = new NamedEntityIteratorRepo($repo);
+}
+$crawler    = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
+$dateFilter = !empty($param->after) ? $param->after : '';
+$idFilter   = !empty($param->id) ? "^" . (string) $param->id . "$" : null;
+foreach ($crawler->crawl($source, $dateFilter, $idFilter, $param->limit) as $data) {
+    list($entityMeta, $entityMetaOrig) = $data;
+    $newData = $entityMeta->getDataset()->copyExcept($entityMetaOrig);
+    $log->debug("    new data fetched: \n      " . trim(str_replace("\n", "\n      ", (string) $newData)));
+
+    // save entity's metadata
+    if ($param->mode >= MODE_TEST && count($newData) > 0) {
+        $log->info("  updating ARCHE resource " . ($param->mode === MODE_TEST ? '(test)' : ''));
+        try {
+            $merged = $entity->updateMetadata($entityMeta, $param->mode === MODE_TEST);
+            foreach ($merged as $i) {
+                $processed[$i] = 1;
+            }
+            $merged = count($merged) > 0 ? '(merged with: ' . implode(', ', $merged) . ')' : '';
+            $log->info("    succeeded $merged");
+        } catch (\Exception $e) {
+            $log->error("    failed with: " . ($param->verbose ? print_r($e, true) : $e->getMessage()));
+        }
+    }
+    if (isset($output)) {
+        ioUtil::serialize($entityMeta, 'text/turtle', $output, $nmsp);
+    }
+}
+
+
+if (isset($output)) {
+    fclose($output);
+}
+if (!empty($param->afterFile)) {
+    file_put_contents($param->afterFile, date("Y-m-d H:i:s"));
+}
+$log->info("### Ended");

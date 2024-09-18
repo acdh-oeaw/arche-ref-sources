@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\refSources;
 
 use rdfInterface\DatasetNodeInterface;
 use rdfInterface\NamedNodeInterface;
+use acdhOeaw\UriNormRules;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerRule;
 use acdhOeaw\UriNormalizerException;
@@ -45,6 +46,12 @@ class PropertyMappings {
 
     private UriNormalizer $normalizer;
     private NamedNodeInterface $idProp;
+
+    /**
+     * 
+     * @var array<string>
+     */
+    private array $dbNames = [];
 
     /**
      * 
@@ -85,6 +92,7 @@ class PropertyMappings {
      */
     public function addExternalDatabaseClass(string $dbName, string $class,
                                              array $mappings): void {
+        $this->dbNames[]     = $dbName;
         $id                  = $this->getId($dbName, $class);
         $this->mappings[$id] = [];
         foreach ($mappings as $i) {
@@ -138,6 +146,30 @@ class PropertyMappings {
         foreach ($classes as $class) {
             foreach ($this->mappings[$class] as $mapping) {
                 $mapping->resolveAndMerge($meta, $extDbMeta, $this->normalizer, $this->idProp === $mapping->getProperty());
+            }
+        }
+    }
+
+    /**
+     * 
+     * @return array<string>
+     */
+    public function getDbNames(): array {
+        return $this->dbNames;
+    }
+
+    public function parseConfig(object $cfg): void {
+        $normRules = UriNormRules::getRules();
+
+        foreach ($cfg as $extDbName => $extDbCfg) {
+            $rule = array_filter($normRules, fn($x) => $x->name === $extDbName);
+            if (count($rule) === 0) {
+                die("No normalization rules found for the '$extDbName' external reference database\n");
+            }
+            $rule = UriNormalizerRule::factory(reset($rule));
+            $this->addExternalDatabase($extDbName, $rule);
+            foreach ($extDbCfg as $class => $cCfg) {
+                $this->addExternalDatabaseClass($extDbName, $class, $cCfg);
             }
         }
     }

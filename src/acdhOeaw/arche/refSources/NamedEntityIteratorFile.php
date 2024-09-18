@@ -45,7 +45,6 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
 
     private Dataset $graph;
     private Schema $schema;
-    private Repo $repo;
 
     /**
      * 
@@ -59,11 +58,10 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
      */
     private array $matching;
 
-    public function __construct(string $rdfFilePath, Repo $repo) {
+    public function __construct(string $rdfFilePath, Schema $schema) {
         $this->graph  = new Dataset();
         $this->graph->add(ioUtil::parse($rdfFilePath, new DataFactory()));
-        $this->repo   = $repo;
-        $this->schema = $this->repo->getSchema();
+        $this->schema = $schema;
     }
 
     public function setFilter(?string $class = null, ?string $idMatch = null,
@@ -89,7 +87,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
         foreach ($this->matching as $i) {
             $meta = $this->graph->copy(new QT($i));
             $meta = DatasetNode::factory($i)->withDataset($meta);
-            yield new NamedEntityFile($meta, $this, $this->repo);
+            yield new NamedEntityFile($meta, $this);
         }
     }
 

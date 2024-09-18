@@ -30,9 +30,9 @@ use quickRdf\DataFactory;
 use acdhOeaw\arche\lib\RepoResource;
 use rdfInterface\DatasetNodeInterface;
 use termTemplates\QuadTemplate as QT;
+use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\SearchTerm;
 use acdhOeaw\arche\lib\SearchConfig;
-use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\exception\NotFound;
 
 /**
@@ -42,19 +42,17 @@ use acdhOeaw\arche\lib\exception\NotFound;
  */
 trait NamedEntityTrait {
 
-    private Repo $repo;
-
     /**
      * 
      * @param DatasetNodeInterface $meta
      * @param bool $test
      * @return array<string>
      */
-    public function updateMetadata(DatasetNodeInterface $meta, bool $test = true): array {
-        if ($this->repo->inTransaction()) {
-            $this->repo->rollback();
+    public function updateMetadata(Repo $repo, DatasetNodeInterface $meta, bool $test = true): array {
+        if ($repo->inTransaction()) {
+            $repo->rollback();
         }
-        $schema = $this->repo->getSchema();
+        $schema = $repo->getSchema();
 
         // merge all matching resources
         $merged                 = [];
@@ -66,7 +64,7 @@ trait NamedEntityTrait {
         $sc->resourceProperties = [$schema->creationDate];
         try {
             $mainUri       = $meta->getNode()->getValue();
-            $repoResources = $this->repo->getResourcesBySearchTerms([$st], $sc);
+            $repoResources = $repo->getResourcesBySearchTerms([$st], $sc);
             $repoResources = iterator_to_array($repoResources);
             // check if $meta's node makes sense and substitute if not
             $inRepo        = array_sum(array_map(fn($x) => $x->getUri() === $mainUri, $repoResources));
@@ -78,7 +76,7 @@ trait NamedEntityTrait {
             $mainRes = reset($mainRes);
             
             // merge all matching repo resources with the main one
-            $this->repo->begin();
+            $repo->begin();
             foreach ($repoResources as $repoResource) {
                 /* @var RepoResource $repoResource */
                 if ($repoResource->getUri() === $mainUri) {
@@ -92,13 +90,13 @@ trait NamedEntityTrait {
             $mainRes->setMetadata($meta);
             $mainRes->updateMetadata(RepoResource::UPDATE_MERGE);
         } catch (NotFound) {
-            $this->repo->begin();
-            $this->repo->createResource($meta);
+            $repo->begin();
+            $repo->createResource($meta);
         }
         if ($test) {
-            $this->repo->rollback();
+            $repo->rollback();
         } else {
-            $this->repo->commit();
+            $repo->commit();
         }
 
         // return merge results

@@ -8,6 +8,7 @@ auth:
 namespaces:
   acdh: https://vocabs.acdh.oeaw.ac.at/schema#
   acdhi: https://id.acdh.oeaw.ac.at/
+# just a yaml syntax for reusing config part
 sharedMappings:
   gettyPlace: &gettyPlace
   - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
@@ -43,9 +44,58 @@ sharedMappings:
     path:
     - http://xmlns.com/foaf/0.1/focus
     - http://www.w3.org/2003/01/geo/wgs84_pos#long
+# defines conditions triggering processing of a given resource
+namedEntities:
+  # resource class
+  https://vocabs.acdh.oeaw.ac.at/schema#Person:
+  # missing properties - miss of any triggers processing
+  - https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+  https://vocabs.acdh.oeaw.ac.at/schema#Place:
+  - https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+  - https://vocabs.acdh.oeaw.ac.at/schema#hasLatitude
+  - https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
+  https://vocabs.acdh.oeaw.ac.at/schema#Organisation:
+  - https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
 referenceSources:
   # identifier of the external authority file matching the UriNormalizer rule's
   # `name` property, see e.g. https://github.com/acdh-oeaw/arche-assets/blob/master/AcdhArcheAssets/uriNormRules.json
+  viaf:
+    http://schema.org/Person:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Person
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+      action: add
+      type: id
+      path:
+      - http://schema.org/sameAs
+      # orcid in viaf seems strange - skipping
+      match: viaf.org|wikidata.org|d-nb.info
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2004/02/skos/core#prefLabel
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
+      action: if missing
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://schema.org/givenName
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
+      action: if missing
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://schema.org/familyName        
   gnd:
     # class reported by the external authority file
     https://d-nb.info/standards/elementset/gnd#DifferentiatedPerson:
@@ -174,43 +224,6 @@ referenceSources:
       type: literal
       path:
       - https://d-nb.info/standards/elementset/gnd#homepage
-  viaf:
-    http://schema.org/Person:
-    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
-      action: if missing
-      value: https://vocabs.acdh.oeaw.ac.at/schema#Person
-      type: resource
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
-      action: add
-      type: id
-      path:
-      - http://schema.org/sameAs
-      # orcid in viaf seems strange - skipping
-      match: viaf.org|wikidata.org|d-nb.info
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
-      action: if missing
-      type: literal
-      langProcess: overwrite
-      langValue: und
-      maxPerLang: 1
-      path:
-      - http://www.w3.org/2004/02/skos/core#prefLabel
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
-      action: if missing
-      type: literal
-      langProcess: assure
-      langValue: und
-      maxPerLang: 1
-      path:
-      - http://schema.org/givenName
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
-      action: if missing
-      type: literal
-      langProcess: assure
-      langValue: und
-      maxPerLang: 1
-      path:
-      - http://schema.org/familyName        
   orcid:
     http://xmlns.com/foaf/0.1/Person:
     - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
@@ -292,3 +305,13 @@ referenceSources:
     http://vocab.getty.edu/ontology#AdminPlaceConcept: *gettyPlace
     http://vocab.getty.edu/ontology#PhysPlaceConcept: *gettyPlace
     http://vocab.getty.edu/ontology#PhysAdminPlaceConcept: *gettyPlace
+  acdh-iso6393:
+    http://www.w3.org/2004/02/skos/core#Concept:
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2004/02/skos/core#prefLabel

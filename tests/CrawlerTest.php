@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2021 Austrian Centre for Digital Humanities.
+ * Copyright 2024 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,33 +24,13 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\refSources;
-
-use acdhOeaw\UriNormalizer;
-use rdfInterface\DatasetNodeInterface;
-use acdhOeaw\arche\lib\Repo;
+namespace acdhOeaw\arche\refSources\tests;
 
 /**
+ * Description of ReferenceSourcesTest
  *
  * @author zozlak
  */
-interface NamedEntityInterface {
-
-    public function getUri(): string;
-
-    /**
-     * 
-     * @param UriNormalizer $normalizer
-     * @return array<string>
-     */
-    public function getIdentifiers(UriNormalizer $normalizer): array;
-
-    public function getMetadata(): DatasetNodeInterface;
-
-    /**
-     * 
-     * @param DatasetNodeInterface $meta
-     * @return array<string>
-     */
-    public function updateMetadata(Repo $repo, DatasetNodeInterface $meta): array;
+class CrawlerTest extends \PHPUnit\Framework\TestCase {
+    
 }
