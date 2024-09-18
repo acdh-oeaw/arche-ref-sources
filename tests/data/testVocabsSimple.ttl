@@ -1,0 +1,5 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://vocabs.acdh.oeaw.ac.at/iso6393/pol>
+    acdh:hasIdentifier  <https://vocabs.acdh.oeaw.ac.at/iso6393/pol> ;
+    acdh:hasTitle       "polonais"@fr, "Polnisch"@de, "Polish"@en .

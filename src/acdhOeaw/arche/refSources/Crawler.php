@@ -75,7 +75,7 @@ class Crawler {
             foreach ($source->getNamedEntities() as $entity) {
                 $NT = $source->getCount();
                 $NN = round(100 * $N / $NT);
-                $this->log->info("  " . $entity->getUri() . " ($N/$NT $NN%)");
+                $this->log?->info("  " . $entity->getUri() . " ($N/$NT $NN%)");
                 $N++;
 
                 $entityUri = $entity->getUri();

@@ -1,0 +1,15 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://d-nb.info/gnd/118523147>
+    a                           acdh:Person;
+    acdh:hasIdentifier          <https://d-nb.info/gnd/118523147>,
+                                <http://viaf.org/viaf/45093792>,
+                                <http://www.wikidata.org/entity/Q114354>;
+    acdh:hasTitle               "Cysarz, Herbert"@und;
+    acdh:hasDescription         "Träger des Eichendorff-Preises 1938; Träger des Sudetendeutschen Kulturpreises 1961"@de,
+                                "Studium in Wien; 1919 Promotion; 1922 Dozent; 1926 apl. Professor; 1928 Ordinarius für Germanistik in Prag, 1938-1945 in München"@de,
+                                "Aus Mährisch-Schlesien stammender Germanist; Hochschullehrer, Professor u.a. in Prag; Schwerpunkt Barockliteratur, auch Romane und zeitkritische philosophische Studien"@de;
+    acdh:hasAlternativeTitle    "Ensarz, Herbert"@und;
+    acdh:hasFirstName           "Herbert,"@und;
+    acdh:hasLastName            "Cysarz"@und .
+

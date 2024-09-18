@@ -52,13 +52,19 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
      */
     private array $filters = [];
     private ?int $limit   = null;
+
     /**
      * 
      * @var array<\rdfInterface\TermInterface>
      */
     private array $matching;
 
-    public function __construct(string $rdfFilePath, Schema $schema) {
+    /**
+     * 
+     * @param string|resource $rdfFilePath
+     * @param Schema $schema
+     */
+    public function __construct(mixed $rdfFilePath, Schema $schema) {
         $this->graph  = new Dataset();
         $this->graph->add(ioUtil::parse($rdfFilePath, new DataFactory()));
         $this->schema = $schema;
@@ -104,7 +110,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
 
     private function findMatching(): void {
         $this->matching = [];
-        $n              = $this->limit;
+        $n              = $this->limit ?? PHP_INT_MAX;
         foreach ($this->graph->listSubjects() as $sbj) {
             $tmp     = $this->graph->copy(new QT($sbj));
             $matches = true;
