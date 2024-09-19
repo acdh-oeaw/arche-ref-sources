@@ -1,0 +1,43 @@
+referenceSources:
+  geonames:
+    http://www.geonames.org/ontology#Feature:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Place
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.geonames.org/ontology#name
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      maxPerLang: 1
+      langProcess: assure
+      langValue: und
+      path:
+      - http://www.geonames.org/ontology#officialName
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
+      action: add
+      type: literal
+      maxPerLang: 1
+      langProcess: assure
+      langValue: und
+      path:
+      - http://www.geonames.org/ontology#alternateName
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLatitude
+      action: if missing
+      type: literal
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2003/01/geo/wgs84_pos#lat
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
+      action: if missing
+      type: literal
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2003/01/geo/wgs84_pos#long

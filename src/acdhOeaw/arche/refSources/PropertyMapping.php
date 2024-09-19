@@ -65,6 +65,12 @@ class PropertyMapping {
     private int $maxPerLang;
     private string $match;
     private string $skip;
+
+    /**
+     * 
+     * @var array<string>
+     */
+    private array $preferredLangs;
     private TermInterface $value;
 
     /**
@@ -74,19 +80,20 @@ class PropertyMapping {
     private array $path;
 
     public function __construct(object $cfg) {
-        $this->property    = DF::namedNode($cfg->property);
-        $this->action      = $cfg->action;
-        $this->type        = $cfg->type;
-        $this->langProcess = $cfg->langProcess ?? self::LANG_PASS;
-        $this->langValue   = $cfg->langValue ?? '';
-        $this->maxPerLang  = $cfg->maxPerLang ?? PHP_INT_MAX;
+        $this->property       = DF::namedNode($cfg->property);
+        $this->action         = $cfg->action;
+        $this->type           = $cfg->type;
+        $this->langProcess    = $cfg->langProcess ?? self::LANG_PASS;
+        $this->langValue      = $cfg->langValue ?? '';
+        $this->maxPerLang     = $cfg->maxPerLang ?? PHP_INT_MAX;
+        $this->preferredLangs = $cfg->preferredLangs ?? [];
         if (!empty($cfg->value)) {
             $this->value = $cfg->type === 'resource' ? DF::namedNode($cfg->value) : DF::literal($cfg->value);
         } else {
             $this->path = array_map(fn($x) => DF::namedNode($x), $cfg->path);
         }
-        $this->match        = $cfg->match ?? '';
-        $this->skip         = $cfg->skip ?? '';
+        $this->match = $cfg->match ?? '';
+        $this->skip  = $cfg->skip ?? '';
     }
 
     public function resolveAndMerge(DatasetNodeInterface $meta,
@@ -178,31 +185,45 @@ class PropertyMapping {
         if ($this->type !== self::TYPE_LITERAL) {
             return;
         }
-        $process  = $this->langProcess;
-        $value    = $this->langValue;
-        $maxCount = $this->maxPerLang;
-        $counts   = [];
-        $meta->forEach(function (QuadInterface $x) use ($process, $value,
-                                                        $maxCount, &$counts) {
-            $literal = $x->getObject();
-            if (!($literal instanceof LiteralInterface)) {
-                return $x->withObject(DF::literal($literal->getValue()));
-            }
+
+        // assure all values are literals
+        $meta->forEach(fn(QuadInterface $q) => $q->getObject() instanceof LiteralInterface ? $q : $q->withObject(DF::literal($q->getObject()->getValue())));
+        $filterPreferred = fn(QuadInterface $q) => in_array($q->getObject()->getLang(), $this->preferredLangs);
+        if ($meta->any($filterPreferred)) {
+            $meta->deleteExcept($filterPreferred);
+        }
+        // sort according to language preferences if needed
+        $triples = iterator_to_array($meta->getIterator());
+        if ($this->maxPerLang < PHP_INT_MAX) {
+            uasort($triples, function ($a, $b) {
+                $aPref = array_search($a->getObject()->getLang(), $this->preferredLangs) ?: PHP_INT_MAX;
+                $bPref = array_search($b->getObject()->getLang(), $this->preferredLangs) ?: PHP_INT_MAX;
+                $comp  = $aPref <=> $bPref;
+                if ($comp === 0) {
+                    $comp = $a->getObject()->getValue() <=> $b->getObject()->getValue();
+                }
+                return $comp;
+            });
+        }
+        // transform values according to settings and store back into $meta
+        $meta->delete();
+        $counts = [];
+        foreach ($triples as $triple) {
+            $literal       = $triple->getObject();
             /* @var $literal LiteralInterface */
-            $lang          = match ($process) {
+            $lang          = match ($this->langProcess) {
                 PropertyMapping::LANG_PASS => $literal->getLang(),
-                PropertyMapping::LANG_ASSURE => $literal->getLang() ?? $value,
-                PropertyMapping::LANG_OVERWRITE => $value,
+                PropertyMapping::LANG_ASSURE => $literal->getLang() ?? $this->langValue,
+                PropertyMapping::LANG_OVERWRITE => $this->langValue,
                 PropertyMapping::LANG_REMOVE => null,
                 default => throw new RuntimeException("Unsupported lang tag processing mode $process"),
             };
             $lang          ??= '';
             $counts[$lang] = ($counts[$lang] ?? 0) + 1;
-            if ($counts[$lang] > $maxCount) {
-                return null;
+            if ($counts[$lang] <= $this->maxPerLang) {
+                $meta->add($triple->withObject($literal->withLang($lang)));
             }
-            return $x->withObject($literal->withLang($lang));
-        });
+        }
     }
 
     private function normalize(DatasetInterface $meta, UriNormalizer $normalizer): void {

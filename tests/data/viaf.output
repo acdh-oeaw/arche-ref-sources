@@ -1,0 +1,12 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://viaf.org/viaf/74650358>
+    a                   acdh:Person;
+    acdh:hasIdentifier  <http://viaf.org/viaf/74650358>,
+                        <https://d-nb.info/gnd/118838113>,
+                        <http://www.wikidata.org/entity/Q213722>;
+    acdh:hasTitle       "Maximilian Joseph Montgelas"@und;
+    acdh:hasFirstName   "Max Josef von"@und;
+    acdh:hasLastName    "Garnerin"@und.
+
+

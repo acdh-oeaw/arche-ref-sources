@@ -53,8 +53,32 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $this->runTestFromData('vocabs');
     }
 
-    public function testGnd(): void {
-        $this->runTestFromData('gnd');
+    public function testGndPerson(): void {
+        $this->runTestFromData('gndPerson');
+    }
+
+    public function testGndOrganisation(): void {
+#        $this->runTestFromData('gndOrganisation');
+    }
+
+    public function testViaf(): void {
+        $this->runTestFromData('viaf');
+    }
+
+    public function testOrcid(): void {
+#        $this->runTestFromData('orcid');
+    }
+
+    public function testGeonames(): void {
+#        $this->runTestFromData('geonames');
+    }
+
+    public function testGetty(): void {
+#        $this->runTestFromData('getty');
+    }
+
+    public function testWikidataPerson(): void {
+#        $this->runTestFromData('wikidataPerson');
     }
 
     private function runTestFromData(string $testName): void {
@@ -73,12 +97,13 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
             $mergedMeta->add($data[0]);
             $oldMeta->add($data[1]);
         }
+//        echo "@@@\n".\quickRdfIo\Util::serialize($mergedMeta, 'text/turtle')."\n";
         // for more meaningfull failure messages let's compare differences with ''
-        $this->assertEquals('', (string) $expected->copyExcept($mergedMeta));
-        $this->assertEquals('', (string) $mergedMeta->copyExcept($expected));
+        $this->assertEquals('', RdfIoUtil::serialize($expected->copyExcept($mergedMeta), 'text/turtle'));
+        $this->assertEquals('', RdfIoUtil::serialize($mergedMeta->copyExcept($expected), 'text/turtle'));
         if (isset($expectedOld)) {
-            $this->assertEquals('', (string) $expectedOld->copyExcept($oldMeta));
-            $this->assertEquals('', (string) $oldMeta->copyExcept($expectedOld));
+            $this->assertEquals('', RdfIoUtil::serialize($expectedOld->copyExcept($oldMeta), 'text/turtle'));
+            $this->assertEquals('', RdfIoUtil::serialize($oldMeta->copyExcept($expectedOld), 'text/turtle'));
         }
     }
 

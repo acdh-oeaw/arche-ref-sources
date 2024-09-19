@@ -1,0 +1,40 @@
+sharedMappings:
+  gettyPlace: &gettyPlace
+  - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+    action: if missing
+    value: https://vocabs.acdh.oeaw.ac.at/schema#Place
+    type: resource
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: assure
+    langValue: und
+    maxPerLang: 1
+    path:
+    - http://www.w3.org/2004/02/skos/core#prefLabel
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
+    action: add
+    type: literal
+    langProcess: assure
+    langValue: und
+    path:
+    - http://www.w3.org/2004/02/skos/core#altLabel
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLatitude
+    action: if missing
+    type: literal
+    maxPerLang: 1
+    path:
+    - http://xmlns.com/foaf/0.1/focus
+    - http://www.w3.org/2003/01/geo/wgs84_pos#lat
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
+    action: if missing
+    type: literal
+    maxPerLang: 1
+    path:
+    - http://xmlns.com/foaf/0.1/focus
+    - http://www.w3.org/2003/01/geo/wgs84_pos#long
+referenceSources:
+  getty:
+    http://vocab.getty.edu/ontology#AdminPlaceConcept: *gettyPlace
+    http://vocab.getty.edu/ontology#PhysPlaceConcept: *gettyPlace
+    http://vocab.getty.edu/ontology#PhysAdminPlaceConcept: *gettyPlace

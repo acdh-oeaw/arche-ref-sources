@@ -59,43 +59,6 @@ namedEntities:
 referenceSources:
   # identifier of the external authority file matching the UriNormalizer rule's
   # `name` property, see e.g. https://github.com/acdh-oeaw/arche-assets/blob/master/AcdhArcheAssets/uriNormRules.json
-  viaf:
-    http://schema.org/Person:
-    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
-      action: if missing
-      value: https://vocabs.acdh.oeaw.ac.at/schema#Person
-      type: resource
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
-      action: add
-      type: id
-      path:
-      - http://schema.org/sameAs
-      # orcid in viaf seems strange - skipping
-      match: viaf.org|wikidata.org|d-nb.info
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
-      action: if missing
-      type: literal
-      langProcess: overwrite
-      langValue: und
-      maxPerLang: 1
-      path:
-      - http://www.w3.org/2004/02/skos/core#prefLabel
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
-      action: if missing
-      type: literal
-      langProcess: assure
-      langValue: und
-      maxPerLang: 1
-      path:
-      - http://schema.org/givenName
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
-      action: if missing
-      type: literal
-      langProcess: assure
-      langValue: und
-      maxPerLang: 1
-      path:
-      - http://schema.org/familyName        
   gnd:
     # class reported by the external authority file
     https://d-nb.info/standards/elementset/gnd#DifferentiatedPerson:
@@ -131,6 +94,16 @@ referenceSources:
     - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
       action: if missing
       type: literal
+      # An optional list of preffered languages
+      # First, if there is at least one value with lang matching this list, values
+      # with langs outside of this list are filtered out. In other case all values are preserved.
+      # Second, if `maxPerLang` is used in combination with `langProcess` other than `pass`,
+      # value are sorted first according to their lang position on this list, e.g.
+      # with `maxPerLang: 1, langProcess: override, langValue: und, preferrredLangs: ['en', 'de']` 
+      # `and inputs values of `foo@de`, `bar@fr` and `baz@en`, the final value will be `baz@und`
+      # (`bar@fr` will be dropped because its lang is not on the `preferrredLangs` list and
+      # the value in `en` will be prefered over `de` as `en` is first on the `preferrredLangs` list)
+      preferredLangs: []
       # One of:
       # - overwrite - forcefully set lang of all values to the `langValue` config property value
       # - assure [default] - if lang is missing, set it to the `langValue` config property value
@@ -140,7 +113,10 @@ referenceSources:
       # It's worth nothing language tag is processed only when `type` config property equals "literal"
       langProcess: overwrite
       langValue: und
-      # maximum number of values per lang tag value; first encountered values below the limit are kept
+      # Maximum number of values per lang tag value
+      # The first value(s) is(are) kept with sorting being described in the `preferredLang` property
+      # description. In case of equal order according to the lang, lexically smaller value(s) is(are)
+      # kept.
       maxPerLang: 1
       path:
       - https://d-nb.info/standards/elementset/gnd#preferredNameForThePerson
@@ -224,6 +200,47 @@ referenceSources:
       type: literal
       path:
       - https://d-nb.info/standards/elementset/gnd#homepage
+  viaf:
+    http://schema.org/Person:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Person
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+      action: add
+      type: id
+      path:
+      - http://schema.org/sameAs
+      # orcid in viaf seems strange - skipping
+      match: viaf.org|wikidata.org|d-nb.info
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      preferredLangs:
+      - en-GB
+      - en-US
+      - de-DE
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2004/02/skos/core#prefLabel
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
+      action: if missing
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://schema.org/givenName
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
+      action: if missing
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://schema.org/familyName
   orcid:
     http://xmlns.com/foaf/0.1/Person:
     - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
