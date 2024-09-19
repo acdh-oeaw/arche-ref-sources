@@ -1,0 +1,11 @@
+referenceSources:
+  acdh-iso6393:
+    http://www.w3.org/2004/02/skos/core#Concept:
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2004/02/skos/core#prefLabel

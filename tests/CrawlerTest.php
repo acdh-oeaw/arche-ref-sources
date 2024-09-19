@@ -41,71 +41,49 @@ use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
  */
 class CrawlerTest extends \PHPUnit\Framework\TestCase {
 
-    const SAMPLE_INPUT_VOCABS = ' <https://vocabs.acdh.oeaw.ac.at/iso6393/pol> <https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier> <https://vocabs.acdh.oeaw.ac.at/iso6393/pol>.';
-    const SAMPLE_INPUT_GND    = ' <https://d-nb.info/gnd/118523147> <https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier> <https://d-nb.info/gnd/118523147> .';
-
-    static private object $cfg;
     static private Schema $schema;
 
     static public function setUpBeforeClass(): void {
         parent::setUpBeforeClass();
-
-        self::$cfg = json_decode(json_encode(yaml_parse_file(__DIR__ . '/../config-sample.yaml')));
-
         $repo         = Repo::factoryFromUrl('https://arche.acdh.oeaw.ac.at/api/');
         self::$schema = $repo->getSchema();
     }
 
-    private Crawler $crawler;
-
-    public function setUp(): void {
-        parent::setUp();
-        $this->crawler = new Crawler(self::$cfg->referenceSources, self::$schema);
+    public function testVocabs(): void {
+        $this->runTestFromData('vocabs');
     }
 
-    public function testVocabsSimple(): void {
-        $source = new NamedEntityIteratorFile(self::SAMPLE_INPUT_VOCABS, self::$schema);
-        foreach ($this->crawler->crawl($source) as $n => $data) {
-            list($fullMeta, $oldMeta) = $data;
-            $this->assertCount(1, $oldMeta);
-            $ref = $this->getExpectedMeta('testVocabsSimple');
-            $this->assertEquals("", (string) $ref->copyExcept($fullMeta));
-            $this->assertEquals("", (string) $fullMeta->copyExcept($ref));
+    public function testGnd(): void {
+        $this->runTestFromData('gnd');
+    }
+
+    private function runTestFromData(string $testName): void {
+        $source   = new NamedEntityIteratorFile(__DIR__ . "/data/$testName.input", self::$schema, 'text/turtle');
+        $crawler  = $this->getCrawler($testName);
+        $expected = new Dataset();
+        $expected->add(RdfIoUtil::parse(__DIR__ . "/data/$testName.output", new DF(), 'text/turtle'));
+        if (file_exists(__DIR__ . "/data/$testName.old")) {
+            $expectedOld = new Dataset();
+            $expectedOld->add(RdfIoUtil::parse(__DIR__ . "/data/$testName.old", new DF(), 'text/turtle'));
         }
-        $this->assertEquals(0, $n);
+
+        $oldMeta    = new Dataset();
+        $mergedMeta = new Dataset();
+        foreach ($crawler->crawl($source) as $data) {
+            $mergedMeta->add($data[0]);
+            $oldMeta->add($data[1]);
+        }
+        // for more meaningfull failure messages let's compare differences with ''
+        $this->assertEquals('', (string) $expected->copyExcept($mergedMeta));
+        $this->assertEquals('', (string) $mergedMeta->copyExcept($expected));
+        if (isset($expectedOld)) {
+            $this->assertEquals('', (string) $expectedOld->copyExcept($oldMeta));
+            $this->assertEquals('', (string) $oldMeta->copyExcept($expectedOld));
+        }
     }
 
-    public function testIfMissing(): void {
-        $inputMeta = "
-            <https://vocabs.acdh.oeaw.ac.at/iso6393/pol> <" . self::$schema->id . "> <https://vocabs.acdh.oeaw.ac.at/iso6393/pol> ;
-                <" . self::$schema->label . "> \"polski\"@pl .
-        ";
-        $source    = new NamedEntityIteratorFile($inputMeta, self::$schema);
-        foreach ($this->crawler->crawl($source) as $n => $data) {
-            list($fullMeta, $oldMeta) = $data;
-            $this->assertTrue($oldMeta->equals($fullMeta));
-            $ref = $this->getExpectedMeta($inputMeta);
-            $this->assertTrue($ref->equals($fullMeta));
-        }
-        $this->assertEquals(0, $n);
-    }
-
-    public function testGndSimple(): void {
-        $source = new NamedEntityIteratorFile(self::SAMPLE_INPUT_GND, self::$schema);
-        foreach ($this->crawler->crawl($source) as $n => $data) {
-            list($fullMeta, $oldMeta) = $data;
-            $this->assertCount(1, $oldMeta);
-            $ref = $this->getExpectedMeta('testGndSimple');
-            $this->assertEquals("", (string) $ref->copyExcept($fullMeta));
-            $this->assertEquals("", (string) $fullMeta->copyExcept($ref));
-        }
-        $this->assertEquals(0, $n);
-    }
-    
-    private function getExpectedMeta(string $testName): Dataset {
-        $d     = new Dataset();
-        $input = file_exists(__DIR__ . '/data/' . $testName . '.ttl') ? __DIR__ . '/data/' . $testName . '.ttl' : $testName;
-        $d->add(RdfIoUtil::parse($input, new DF(), 'text/turtle'));
-        return $d;
+    private function getCrawler(string $testName): Crawler {
+        $cfg = json_decode(json_encode(yaml_parse_file(__DIR__ . "/data/$testName.yaml")));
+        return new Crawler($cfg->referenceSources, self::$schema);
     }
 }

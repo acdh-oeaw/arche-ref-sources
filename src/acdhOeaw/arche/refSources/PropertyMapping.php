@@ -36,7 +36,6 @@ use rdfInterface\DatasetNodeInterface;
 use quickRdf\Dataset;
 use quickRdf\DataFactory as DF;
 use termTemplates\QuadTemplate as QT;
-use termTemplates\NamedNodeTemplate;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
 
@@ -235,24 +234,23 @@ class PropertyMapping {
      * @return DatasetInterface
      */
     private function resolveRecursively(DatasetInterface $meta,
-                                        NamedNodeInterface $sbj,
+                                        TermInterface $sbj,
                                         UriNormalizer $normalizer, array $path): DatasetInterface {
         if (count($path) < 2) {
             return $meta->copy(new QT($sbj, $path[0]));
         }
-        $nnt    = new NamedNodeTemplate(null, NamedNodeTemplate::ANY);
         $prop   = array_shift($path);
         $values = new Dataset();
-        foreach ($meta->listObjects(new QT($sbj, $prop, $nnt)) as $newSbj) {
+        foreach ($meta->listObjects(new QT($sbj, $prop)) as $newSbj) {
             $newValues = $meta->copy(new QT($newSbj));
             if (count($newValues) > 0) {
-                $values->union($this->resolveRecursively($meta, $newSbj, $normalizer, $path));
+                $values->add($this->resolveRecursively($meta, $newSbj, $normalizer, $path));
             } else {
                 // just empty object - try to resolve it
                 try {
                     $newMeta = $normalizer->fetch($newSbj->getValue());
                     if ($newMeta !== null) {
-                        $values->union($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
+                        $values->add($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
                     }
                 } catch (UriNormalizerException $e) {
                     echo "error: unable to resolve the URI: " . $e->getMessage() . "\n";

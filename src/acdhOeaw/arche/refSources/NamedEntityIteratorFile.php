@@ -64,9 +64,10 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
      * @param string|resource $rdfFilePath
      * @param Schema $schema
      */
-    public function __construct(mixed $rdfFilePath, Schema $schema) {
+    public function __construct(mixed $rdfFilePath, Schema $schema,
+                                string | null $format = null) {
         $this->graph  = new Dataset();
-        $this->graph->add(ioUtil::parse($rdfFilePath, new DataFactory()));
+        $this->graph->add(ioUtil::parse($rdfFilePath, new DataFactory(), $format));
         $this->schema = $schema;
     }
 

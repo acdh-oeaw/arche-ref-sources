@@ -1,0 +1,58 @@
+referenceSources:
+  gnd:
+    https://d-nb.info/standards/elementset/gnd#DifferentiatedPerson:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Person
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+      action: add
+      type: id
+      path:
+      - http://www.w3.org/2002/07/owl#sameAs
+      match: viaf.org|wikidata.org|d-nb.info|orcid.org
+      skip: isni.org|id.loc.gov.pl
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - https://d-nb.info/standards/elementset/gnd#preferredNameForThePerson
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - https://d-nb.info/standards/elementset/gnd#preferredNameEntityForThePerson
+      - https://d-nb.info/standards/elementset/gnd#forename
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - https://d-nb.info/standards/elementset/gnd#preferredNameEntityForThePerson
+      - https://d-nb.info/standards/elementset/gnd#surname
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasUrl
+      action: add
+      type: literal
+      path:
+      - https://d-nb.info/standards/elementset/gnd#homepage
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasDescription
+      action: replace
+      type: literal
+      path:
+      - https://d-nb.info/standards/elementset/gnd#biographicalOrHistoricalInformation
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
+      action: add
+      type: literal
+      langProcess: assure
+      langValue: und
+      maxPerLang: 3
+      path:
+      - https://d-nb.info/standards/elementset/gnd#variantNameForThePerson
