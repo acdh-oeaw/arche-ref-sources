@@ -58,7 +58,7 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testGndOrganisation(): void {
-#        $this->runTestFromData('gndOrganisation');
+        $this->runTestFromData('gndOrganisation');
     }
 
     public function testViaf(): void {
@@ -70,7 +70,7 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testGeonames(): void {
-#        $this->runTestFromData('geonames');
+        $this->runTestFromData('geonames');
     }
 
     public function testGetty(): void {
@@ -99,11 +99,11 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         }
 //        echo "@@@\n".\quickRdfIo\Util::serialize($mergedMeta, 'text/turtle')."\n";
         // for more meaningfull failure messages let's compare differences with ''
-        $this->assertEquals('', RdfIoUtil::serialize($expected->copyExcept($mergedMeta), 'text/turtle'));
-        $this->assertEquals('', RdfIoUtil::serialize($mergedMeta->copyExcept($expected), 'text/turtle'));
+        $this->assertEquals('', RdfIoUtil::serialize($expected->copyExcept($mergedMeta), 'text/turtle'), 'Missing in merged metadata');
+        $this->assertEquals('', RdfIoUtil::serialize($mergedMeta->copyExcept($expected), 'text/turtle'), 'Additional in merged metadata');
         if (isset($expectedOld)) {
-            $this->assertEquals('', RdfIoUtil::serialize($expectedOld->copyExcept($oldMeta), 'text/turtle'));
-            $this->assertEquals('', RdfIoUtil::serialize($oldMeta->copyExcept($expectedOld), 'text/turtle'));
+            $this->assertEquals('', RdfIoUtil::serialize($expectedOld->copyExcept($oldMeta), 'text/turtle'), 'Missing in old metadata');
+            $this->assertEquals('', RdfIoUtil::serialize($oldMeta->copyExcept($expectedOld), 'text/turtle'), 'Additional in old metadata');
         }
     }
 

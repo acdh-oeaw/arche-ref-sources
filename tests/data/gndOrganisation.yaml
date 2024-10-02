@@ -18,27 +18,12 @@ referenceSources:
       maxPerLang: 1
       path:
       - https://d-nb.info/standards/elementset/gnd#preferredNameForTheCorporateBody
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
-      action: add
-      type: literal
-      langProcess: assure
-      langValue: und
-      path:
-      - https://d-nb.info/standards/elementset/gnd#variantNameForTheCorporateBody
     - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAddress
       action: replace
       type: literal
       path:
       - https://d-nb.info/standards/elementset/gnd#placeOfBusiness
       - https://d-nb.info/standards/elementset/gnd#preferredNameForThePlaceOrGeographicName
-    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasCountry
-      action: replace
-      type: literal
-      langProcess: assure
-      langValue: und
-      path:
-      - https://d-nb.info/standards/elementset/gnd#geographicAreaCode
-      - http://www.w3.org/2004/02/skos/core#prefLabel
     - property: https://vocabs.acdh.oeaw.ac.at/schema#hasUrl
       action: add
       type: literal

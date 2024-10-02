@@ -16,7 +16,7 @@
         "psr/log": "^3",
         "zozlak/argparse": "^1",
         "acdh-oeaw/arche-assets": "^3.8.1",
-        "acdh-oeaw/arche-lib": "^6",
+        "acdh-oeaw/arche-lib": "^7",
         "acdh-oeaw/uri-normalizer": "^3",
         "zozlak/logging": "^1.0"
     },
