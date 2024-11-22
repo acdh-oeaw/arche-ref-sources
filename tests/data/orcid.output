@@ -1,0 +1,10 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://orcid.org/0000-0002-2044-1810>
+    a                           acdh:Person;
+    acdh:hasIdentifier          <https://orcid.org/0000-0002-2044-1810>;
+    acdh:hasTitle               "Dr. Ing. Mathias Mehofer"@und;
+    acdh:hasFirstName           "Dr. Ing. Mathias"@und;
+    acdh:hasLastName            "Mehofer"@und;
+    acdh:hasUrl                 "http://www.univie.ac.at/vias/archaeometallurgie.html",
+                                "http://univie.academia.edu/MathiasMehofer".

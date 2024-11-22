@@ -120,7 +120,7 @@ class Crawler {
             }
         }
 
-        // update entiti's metadata
+        // update entity's metadata
         $entityMeta     = $entity->getMetadata();
         $entityMetaOrig = $entityMeta->getDataset()->copy();
         foreach ($entityExtMeta as $extDbName => $extDbMetas) {

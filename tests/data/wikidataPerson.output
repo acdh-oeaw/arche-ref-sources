@@ -1,0 +1,10 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://www.wikidata.org/entity/Q2590485>
+    a                       acdh:Person;
+    acdh:hasIdentifier      <http://www.wikidata.org/entity/Q2590485>,
+                            <https://d-nb.info/gnd/133061701>, 
+                            <http://viaf.org/viaf/67672267>;
+    acdh:hasTitle           "Wolfgang Lutz"@und;
+    acdh:hasFirstName       "Wolfgang"@und;
+    acdh:hasLastName        "Lutz"@und.

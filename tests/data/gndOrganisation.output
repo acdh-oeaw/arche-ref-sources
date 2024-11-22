@@ -1,0 +1,16 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://d-nb.info/gnd/2016751-9>
+    a                           acdh:Organisation;
+    acdh:hasIdentifier          <https://d-nb.info/gnd/2016751-9>,
+                                <https://d-nb.info/gnd/1087322561>,
+                                <https://d-nb.info/gnd/108617416X>,
+                                <https://d-nb.info/gnd/4070561-4>,
+                                <http://viaf.org/viaf/126584224>,
+                                <https://isni.org/isni/0000000121090680>,
+                                <https://id.loc.gov/rwo/agents/n50056014>,
+                                <http://www.wikidata.org/entity/Q95569>;
+    acdh:hasTitle               "Kunsthistorisches Museum Wien"@und;
+    acdh:hasUrl                 "https://www.khm.at/";
+    acdh:hasAddress             "Wien"@und.
+

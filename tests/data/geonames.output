@@ -1,0 +1,8 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://sws.geonames.org/2782504/>
+    a                           acdh:Place;
+    acdh:hasIdentifier          <https://sws.geonames.org/2782504/>;
+    acdh:hasTitle               "Anif"@und;
+    acdh:hasLatitude            "47.75"^^<http://www.w3.org/2001/XMLSchema#float>;
+    acdh:hasLongitude           "13.06667"^^<http://www.w3.org/2001/XMLSchema#float>.

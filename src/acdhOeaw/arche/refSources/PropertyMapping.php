@@ -65,6 +65,8 @@ class PropertyMapping {
     private int $maxPerLang;
     private string $match;
     private string $skip;
+    private string $replace;
+    private string | null $datatype;
 
     /**
      * 
@@ -92,8 +94,10 @@ class PropertyMapping {
         } else {
             $this->path = array_map(fn($x) => DF::namedNode($x), $cfg->path);
         }
-        $this->match = $cfg->match ?? '';
-        $this->skip  = $cfg->skip ?? '';
+        $this->match    = $cfg->match ?? '';
+        $this->skip     = $cfg->skip ?? '';
+        $this->replace  = $cfg->replace ?? '';
+        $this->datatype = $cfg->datatype ?? null;
     }
 
     public function resolveAndMerge(DatasetNodeInterface $meta,
@@ -135,7 +139,8 @@ class PropertyMapping {
                             UriNormalizer $normalizer, bool $normalize,
                             ?TermInterface $subject = null): DatasetNodeInterface {
         $values = $this->resolvePath($meta, $normalizer, $subject);
-        $this->filter($values->getDataset());
+        $this->filterAndReplace($values->getDataset());
+        $this->assureType($values->getDataset());
         $this->processLang($values->getDataset());
         if ($normalize) {
             $this->normalize($values->getDataset(), $normalizer);
@@ -171,7 +176,7 @@ class PropertyMapping {
         return $this->property;
     }
 
-    private function filter(DatasetInterface $values): void {
+    private function filterAndReplace(DatasetInterface $values): void {
         $match = $this->match;
         $skip  = $this->skip;
         if (empty($match) && empty($skip)) {
@@ -179,6 +184,25 @@ class PropertyMapping {
         }
         $skip = empty($skip) ? '^$' : $skip;
         $values->deleteExcept(fn(QuadInterface $x) => preg_match("`$match`", $x->getObject()->getValue()) && !preg_match("`$skip`", $x->getObject()->getValue()));
+        if (!empty($this->replace)) {
+            $values->forEach(function (QuadInterface $x) {
+                $obj   = $x->getObject();
+                $value = preg_replace("`$this->match`u", $this->replace, $obj->getValue());
+                if ($obj instanceof LiteralInterface) {
+                    return $x->withObject($obj->withValue($value));
+                } elseif ($obj instanceof NamedNodeInterface) {
+                    return $x->withObject(DF::namedNode($value));
+                }
+            });
+        }
+    }
+
+    private function assureType(DatasetInterface $values): void {
+        if ($this->type === self::TYPE_LITERAL) {
+            // handled by processLang
+            return;
+        }
+        $values->forEach(fn(QuadInterface $x) => $x->withObject(DF::namedNode($x->getObject()->getValue())));
     }
 
     private function processLang(DatasetInterface $meta): void {
@@ -188,9 +212,8 @@ class PropertyMapping {
 
         // assure all values are literals
         $meta->forEach(fn(QuadInterface $q) => $q->getObject() instanceof LiteralInterface ? $q : $q->withObject(DF::literal($q->getObject()->getValue())));
-        $filterPreferred = fn(QuadInterface $q) => in_array($q->getObject()->getLang(), $this->preferredLangs);
-        if ($meta->any($filterPreferred)) {
-            $meta->deleteExcept($filterPreferred);
+        if (count($this->preferredLangs) > 0) {
+            $meta->deleteExcept(fn(QuadInterface $q) => in_array($q->getObject()->getLang(), $this->preferredLangs));
         }
         // sort according to language preferences if needed
         $triples = iterator_to_array($meta->getIterator());
@@ -221,7 +244,11 @@ class PropertyMapping {
             $lang          ??= '';
             $counts[$lang] = ($counts[$lang] ?? 0) + 1;
             if ($counts[$lang] <= $this->maxPerLang) {
-                $meta->add($triple->withObject($literal->withLang($lang)));
+                $toAdd = $literal->withLang($lang);
+                if (!empty($this->datatype)) {
+                    $toAdd = $toAdd->withDatatype($this->datatype);
+                }
+                $meta->add($triple->withObject($toAdd));
             }
         }
     }

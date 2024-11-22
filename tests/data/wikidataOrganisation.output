@@ -1,0 +1,12 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://www.wikidata.org/entity/Q299015>
+    a                           acdh:Organisation;
+    acdh:hasIdentifier          <http://www.wikidata.org/entity/Q299015>,
+                                <https://d-nb.info/gnd/1001454-8>,
+                                <http://viaf.org/viaf/141440509>,
+                                <https://ror.org/03anc3s24>,
+                                <http://vocab.getty.edu/ulan/500312603>;
+    acdh:hasTitle               "Austrian Academy of Sciences"@en,
+                                "Österreichische Akademie der Wissenschaften"@de.
+

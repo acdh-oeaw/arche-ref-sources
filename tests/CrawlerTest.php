@@ -66,7 +66,7 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testOrcid(): void {
-#        $this->runTestFromData('orcid');
+        $this->runTestFromData('orcid');
     }
 
     public function testGeonames(): void {
@@ -74,11 +74,19 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testGetty(): void {
-#        $this->runTestFromData('getty');
+        $this->runTestFromData('getty');
     }
 
     public function testWikidataPerson(): void {
-#        $this->runTestFromData('wikidataPerson');
+        $this->runTestFromData('wikidataPerson');
+    }
+
+    public function testWikidataOrganisation(): void {
+        $this->runTestFromData('wikidataOrganisation');
+    }
+
+    public function testWikidataPlace(): void {
+        $this->runTestFromData('wikidataPlace');
     }
 
     private function runTestFromData(string $testName): void {

@@ -21,6 +21,8 @@ referenceSources:
     - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAddress
       action: replace
       type: literal
+      langProcess: assure
+      langValue: und
       path:
       - https://d-nb.info/standards/elementset/gnd#placeOfBusiness
       - https://d-nb.info/standards/elementset/gnd#preferredNameForThePlaceOrGeographicName

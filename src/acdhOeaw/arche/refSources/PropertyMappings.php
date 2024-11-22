@@ -34,6 +34,7 @@ use acdhOeaw\UriNormalizerRule;
 use acdhOeaw\UriNormalizerException;
 use zozlak\RdfConstants as RDF;
 use termTemplates\QuadTemplate as QT;
+use termTemplates\AnyOfTemplate;
 use quickRdf\DataFactory as DF;
 use rdfInterface\QuadInterface;
 
@@ -43,6 +44,8 @@ use rdfInterface\QuadInterface;
  * @author zozlak
  */
 class PropertyMappings {
+
+    const WIKIDATA_INSTANCE_OF = 'http://www.wikidata.org/prop/direct/P31';
 
     private UriNormalizer $normalizer;
     private NamedNodeInterface $idProp;
@@ -185,10 +188,14 @@ class PropertyMappings {
      * @return array<string>
      */
     private function getClasses(DatasetNodeInterface $meta, ?string $dbName): array {
-        $dbName  ??= $this->matchExternalDatabase($meta->getNode()->getValue());
-        $classes = $meta->getDataset()->copy(new QT($meta->getNode(), DF::namedNode(RDF::RDF_TYPE)));
-        $classes = array_map(fn(QuadInterface $x) => $this->getId($dbName, $x->getObject()->getValue()), iterator_to_array($classes));
-        $classes = array_intersect($classes, array_keys($this->mappings));
+        $dbName          ??= $this->matchExternalDatabase($meta->getNode()->getValue());
+        $classProperties = [
+            DF::namedNode(RDF::RDF_TYPE),
+            DF::namedNode(self::WIKIDATA_INSTANCE_OF),
+        ];
+        $classes         = $meta->getDataset()->listObjects(new QT($meta->getNode(), new AnyOfTemplate($classProperties)))->getValues();
+        $classes         = array_map(fn($x) => $this->getId($dbName, $x), $classes);
+        $classes         = array_intersect($classes, array_keys($this->mappings));
         return $classes;
     }
 }

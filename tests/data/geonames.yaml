@@ -37,11 +37,13 @@ referenceSources:
       action: if missing
       type: literal
       maxPerLang: 1
+      datatype: http://www.w3.org/2001/XMLSchema#float
       path:
       - http://www.w3.org/2003/01/geo/wgs84_pos#lat
     - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
       action: if missing
       type: literal
       maxPerLang: 1
+      datatype: http://www.w3.org/2001/XMLSchema#float
       path:
       - http://www.w3.org/2003/01/geo/wgs84_pos#long

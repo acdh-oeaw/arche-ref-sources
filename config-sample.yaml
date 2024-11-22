@@ -8,42 +8,6 @@ auth:
 namespaces:
   acdh: https://vocabs.acdh.oeaw.ac.at/schema#
   acdhi: https://id.acdh.oeaw.ac.at/
-# just a yaml syntax for reusing config part
-sharedMappings:
-  gettyPlace: &gettyPlace
-  - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
-    action: if missing
-    value: https://vocabs.acdh.oeaw.ac.at/schema#Place
-    type: resource
-  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
-    action: if missing
-    type: literal
-    langProcess: assure
-    langValue: und
-    maxPerLang: 1
-    path:
-    - http://www.w3.org/2004/02/skos/core#prefLabel
-  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
-    action: add
-    type: literal
-    langProcess: assure
-    langValue: und
-    path:
-    - http://www.w3.org/2004/02/skos/core#altLabel
-  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLatitude
-    action: if missing
-    type: literal
-    maxPerLang: 1
-    path:
-    - http://xmlns.com/foaf/0.1/focus
-    - http://www.w3.org/2003/01/geo/wgs84_pos#lat
-  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
-    action: if missing
-    type: literal
-    maxPerLang: 1
-    path:
-    - http://xmlns.com/foaf/0.1/focus
-    - http://www.w3.org/2003/01/geo/wgs84_pos#long
 # defines conditions triggering processing of a given resource
 namedEntities:
   # resource class
@@ -56,6 +20,198 @@ namedEntities:
   - https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
   https://vocabs.acdh.oeaw.ac.at/schema#Organisation:
   - https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+# just a yaml syntax for reusing config part
+sharedMappings:
+  wikidataPerson: &wikidataPerson
+  - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+    action: if missing
+    value: https://vocabs.acdh.oeaw.ac.at/schema#Person
+    type: resource
+  # GND
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P227
+  # VIAF
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P214
+  # ORCID
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P496
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: overwrite
+    langValue: und
+    preferredLangs:
+      - en
+      - de    
+    path:
+    - http://www.w3.org/2000/01/rdf-schema#label
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: overwrite
+    langValue: und
+    preferredLangs:
+      - en
+      - de    
+    path:
+    - http://www.w3.org/2004/02/skos/core#prefLabel
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: overwrite
+    langValue: und
+    preferredLangs:
+      - en
+      - de    
+    path:
+    - http://schema.org/name
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
+    action: if missing
+    type: literal
+    langProcess: overwrite
+    langValue: und
+    maxPerLang: 1
+    path:
+    - http://www.wikidata.org/prop/direct/P735
+    - http://www.w3.org/2000/01/rdf-schema#label
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
+    action: if missing
+    type: literal
+    langProcess: overwrite
+    langValue: und
+    maxPerLang: 1
+    path:
+    - http://www.wikidata.org/prop/direct/P734
+    - http://www.w3.org/2000/01/rdf-schema#label
+  wikidataPlace: &wikidataPlace
+  - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+    action: if missing
+    value: https://vocabs.acdh.oeaw.ac.at/schema#Place
+    type: resource
+  # GND
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P227
+  # VIAF
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P214
+  # geonames
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P1566
+  # GETTY
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    action: add
+    type: id
+    path:
+    - http://www.wikidata.org/prop/direct-normalized/P1667
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: assure
+    langValue: und
+    preferredLangs:
+      - en
+      - de    
+    path:
+    - http://www.w3.org/2000/01/rdf-schema#label
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: assure
+    langValue: und
+    preferredLangs:
+      - en
+      - de    
+    path:
+    - http://www.w3.org/2004/02/skos/core#prefLabel
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: assure
+    langValue: und
+    preferredLangs:
+      - en
+      - de    
+    path:
+    - http://schema.org/name
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLatitude
+    action: if missing
+    type: literal
+    maxPerLang: 1
+    match: ^Point[(][0-9.]+ ([0-9.]+)[)]$
+    replace: \1
+    datatype: http://www.w3.org/2001/XMLSchema#float
+    path:
+    - http://www.wikidata.org/prop/direct/P625
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
+    action: if missing
+    type: literal
+    maxPerLang: 1
+    match: ^Point[(]([0-9.]+) [0-9.]+[)]$
+    replace: \1
+    datatype: http://www.w3.org/2001/XMLSchema#float
+    path:
+    - http://www.wikidata.org/prop/direct/P625
+  gettyPlace: &gettyPlace
+  - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+    action: if missing
+    value: https://vocabs.acdh.oeaw.ac.at/schema#Place
+    type: resource
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+    action: if missing
+    type: literal
+    langProcess: assure
+    langValue: und
+    maxPerLang: 1
+    preferredLangs:
+      - en
+      - de
+    path:
+    - http://www.w3.org/2004/02/skos/core#prefLabel
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasAlternativeTitle
+    action: add
+    type: literal
+    langProcess: assure
+    langValue: und
+    preferredLangs:
+      - en
+      - de
+    path:
+    - http://www.w3.org/2004/02/skos/core#altLabel
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLatitude
+    action: if missing
+    type: literal
+    maxPerLang: 1
+    datatype: http://www.w3.org/2001/XMLSchema#float
+    path:
+    - http://xmlns.com/foaf/0.1/focus
+    - http://www.w3.org/2003/01/geo/wgs84_pos#lat
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLongitude
+    action: if missing
+    type: literal
+    maxPerLang: 1
+    datatype: http://www.w3.org/2001/XMLSchema#float
+    path:
+    - http://xmlns.com/foaf/0.1/focus
+    - http://www.w3.org/2003/01/geo/wgs84_pos#long
 referenceSources:
   # identifier of the external authority file matching the UriNormalizer rule's
   # `name` property, see e.g. https://github.com/acdh-oeaw/arche-assets/blob/master/AcdhArcheAssets/uriNormRules.json
@@ -95,8 +251,7 @@ referenceSources:
       action: if missing
       type: literal
       # An optional list of preffered languages
-      # First, if there is at least one value with lang matching this list, values
-      # with langs outside of this list are filtered out. In other case all values are preserved.
+      # First, if it is provided, then only values in these langs are kept.
       # Second, if `maxPerLang` is used in combination with `langProcess` other than `pass`,
       # value are sorted first according to their lang position on this list, e.g.
       # with `maxPerLang: 1, langProcess: override, langValue: und, preferrredLangs: ['en', 'de']` 
@@ -307,6 +462,19 @@ referenceSources:
     http://vocab.getty.edu/ontology#AdminPlaceConcept: *gettyPlace
     http://vocab.getty.edu/ontology#PhysPlaceConcept: *gettyPlace
     http://vocab.getty.edu/ontology#PhysAdminPlaceConcept: *gettyPlace
+  wikidata:
+    http://www.wikidata.org/entity/Q200250: *wikidataPlace
+    http://www.wikidata.org/entity/Q200250: *wikidataPlace
+    http://www.wikidata.org/entity/Q515: *wikidataPlace
+    http://www.wikidata.org/entity/Q7930989: *wikidataPlace
+    http://www.wikidata.org/entity/Q124250988: *wikidataPlace
+    http://www.wikidata.org/entity/Q486972: *wikidataPlace
+    http://www.wikidata.org/entity/Q123964505: *wikidataPlace
+    http://www.wikidata.org/entity/Q839954: *wikidataPlace
+    http://www.wikidata.org/entity/Q2221906: *wikidataPlace
+    http://www.wikidata.org/entity/Q17334923: *wikidataPlace
+    http://www.wikidata.org/entity/Q27096213: *wikidataPlace
+    http://www.wikidata.org/entity/Q5: *wikidataPerson
   acdh-iso6393:
     http://www.w3.org/2004/02/skos/core#Concept:
     - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle

@@ -1,0 +1,15 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://www.wikidata.org/entity/Q1741>
+    a                       acdh:Place;
+    acdh:hasIdentifier      <http://www.wikidata.org/entity/Q1741>,
+                            <https://d-nb.info/gnd/4066009-6>, 
+                            <http://viaf.org/viaf/155870729>, 
+                            <http://viaf.org/viaf/238999862>, 
+                            <https://sws.geonames.org/2761369/>, 
+                            <http://vocab.getty.edu/tgn/7003321>, 
+                            <http://vocab.getty.edu/tgn/7003030>;
+    acdh:hasTitle           "Vienna"@en,
+                            "Wien"@de;
+    acdh:hasLatitude        "48.208333333333"^^<http://www.w3.org/2001/XMLSchema#float>;
+    acdh:hasLongitude       "16.3725"^^<http://www.w3.org/2001/XMLSchema#float>.

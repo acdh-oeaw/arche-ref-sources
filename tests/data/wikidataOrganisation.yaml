@@ -1,8 +1,8 @@
 sharedMappings:
-  wikidataPerson: &wikidataPerson
+  wikidataOrganisation: &wikidataOrganisation
   - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     action: if missing
-    value: https://vocabs.acdh.oeaw.ac.at/schema#Person
+    value: https://vocabs.acdh.oeaw.ac.at/schema#Organisation
     type: resource
   # GND
   - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
@@ -16,16 +16,24 @@ sharedMappings:
     type: id
     path:
     - http://www.wikidata.org/prop/direct-normalized/P214
-  # ORCID
+  # GETTY
   - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
     action: add
     type: id
     path:
-    - http://www.wikidata.org/prop/direct-normalized/P496
+    - http://www.wikidata.org/prop/direct-normalized/P245
+  # ROR
+  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+    type: id
+    action: add
+    match: ^(.*)$
+    replace: https://ror.org/\1
+    path:
+    - http://www.wikidata.org/prop/direct/P6782
   - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
     action: if missing
     type: literal
-    langProcess: overwrite
+    langProcess: assure
     langValue: und
     preferredLangs:
       - en
@@ -35,7 +43,7 @@ sharedMappings:
   - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
     action: if missing
     type: literal
-    langProcess: overwrite
+    langProcess: assure
     langValue: und
     preferredLangs:
       - en
@@ -45,31 +53,24 @@ sharedMappings:
   - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
     action: if missing
     type: literal
-    langProcess: overwrite
+    langProcess: assure
     langValue: und
     preferredLangs:
       - en
       - de    
     path:
     - http://schema.org/name
-  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasFirstName
-    action: if missing
-    type: literal
-    langProcess: overwrite
-    langValue: und
-    maxPerLang: 1
-    path:
-    - http://www.wikidata.org/prop/direct/P735
-    - http://www.w3.org/2000/01/rdf-schema#label
-  - property: https://vocabs.acdh.oeaw.ac.at/schema#hasLastName
-    action: if missing
-    type: literal
-    langProcess: overwrite
-    langValue: und
-    maxPerLang: 1
-    path:
-    - http://www.wikidata.org/prop/direct/P734
-    - http://www.w3.org/2000/01/rdf-schema#label
 referenceSources:
   wikidata:
-    http://www.wikidata.org/entity/Q5: *wikidataPerson
+    # wikidata is evil
+    http://www.wikidata.org/entity/Q1371037: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q162633: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q16519632: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q1664720: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q31855: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q3918: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q414147: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q43229: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q4671277: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q4830453: *wikidataOrganisation
+    http://www.wikidata.org/entity/Q5341295: *wikidataOrganisation
