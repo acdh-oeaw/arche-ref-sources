@@ -28,9 +28,11 @@ namespace acdhOeaw\arche\refSources;
 
 use Generator;
 use Psr\Log\LoggerInterface;
-use rdfInterface\DatasetNode;
+use rdfInterface\DatasetInterface;
+use rdfInterface\DatasetNodeInterface;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerCache;
+use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Schema;
 
 /**
@@ -40,6 +42,7 @@ use acdhOeaw\arche\lib\Schema;
  */
 class Crawler {
 
+    /** @phpstan-ignore property.onlyWritten */
     private Schema $schema;
     private PropertyMappings $mappings;
     private UriNormalizer $normalizer;
@@ -57,8 +60,7 @@ class Crawler {
     /**
      * 
      * @param NamedEntityIteratorInterface $source
-     * @param bool $verbose
-     * @return Generator<array<DatasetNode>>
+     * @return Generator<array<DatasetInterface>>
      */
     public function crawl(NamedEntityIteratorInterface $source,
                           string $dateFilter = '',
@@ -90,6 +92,10 @@ class Crawler {
         }
     }
 
+    /**
+     * 
+     * @return array<DatasetInterface>
+     */
     private function processEntity(NamedEntityInterface $entity): array {
         // collect data from all external databases reachable from this entity
         $entityExtMeta = [];

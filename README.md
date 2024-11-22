@@ -1,5 +1,8 @@
 # arche-ref-sources
 
+[![Build status](https://github.com/acdh-oeaw/arche-ref-sources/actions/workflows/test.yaml/badge.svg)](https://github.com/acdh-oeaw/arche-ref-sources/actions/workflows/test.yaml)
+[![Coverage Status](https://coveralls.io/repos/github/acdh-oeaw/arche-ref-sources/badge.svg?branch=master)](https://coveralls.io/github/acdh-oeaw/arche-ref-sources?branch=master)
+
 A script for enhancing an ARCHE Suite repository data with information gathered from external reference sources (Geonames, GND, wikidata, etc.).
 
 It works by resolving existing identifiers that are external reference source URIs, fetching information from there and updating a corresponding ARCHE Suite repository resource.

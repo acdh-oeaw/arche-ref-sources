@@ -37,6 +37,10 @@ interface NamedEntityIteratorInterface {
     public function setFilter(?string $class = null, ?string $idMatch = null,
                               ?string $minModDate = null, ?int $limit = null): void;
 
+    /**
+     * 
+     * @return Generator<NamedEntityInterface>
+     */
     public function getNamedEntities(): Generator;
 
     public function getCount(): int;

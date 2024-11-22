@@ -90,6 +90,7 @@ class PropertyMapping {
         $this->maxPerLang     = $cfg->maxPerLang ?? PHP_INT_MAX;
         $this->preferredLangs = $cfg->preferredLangs ?? [];
         if (!empty($cfg->value)) {
+            /** @phpstan-ignore property.notFound */
             $this->value = $cfg->type === 'resource' ? DF::namedNode($cfg->value) : DF::literal($cfg->value);
         } else {
             $this->path = array_map(fn($x) => DF::namedNode($x), $cfg->path);
@@ -213,13 +214,16 @@ class PropertyMapping {
         // assure all values are literals
         $meta->forEach(fn(QuadInterface $q) => $q->getObject() instanceof LiteralInterface ? $q : $q->withObject(DF::literal($q->getObject()->getValue())));
         if (count($this->preferredLangs) > 0) {
+            /** @phpstan-ignore method.notFound */
             $meta->deleteExcept(fn(QuadInterface $q) => in_array($q->getObject()->getLang(), $this->preferredLangs));
         }
         // sort according to language preferences if needed
         $triples = iterator_to_array($meta->getIterator());
         if ($this->maxPerLang < PHP_INT_MAX) {
             uasort($triples, function ($a, $b) {
+                /** @phpstan-ignore method.notFound */
                 $aPref = array_search($a->getObject()->getLang(), $this->preferredLangs) ?: PHP_INT_MAX;
+                /** @phpstan-ignore method.notFound */
                 $bPref = array_search($b->getObject()->getLang(), $this->preferredLangs) ?: PHP_INT_MAX;
                 $comp  = $aPref <=> $bPref;
                 if ($comp === 0) {
@@ -235,15 +239,18 @@ class PropertyMapping {
             $literal       = $triple->getObject();
             /* @var $literal LiteralInterface */
             $lang          = match ($this->langProcess) {
+            /** @phpstan-ignore method.notFound */
                 PropertyMapping::LANG_PASS => $literal->getLang(),
+                /** @phpstan-ignore method.notFound */
                 PropertyMapping::LANG_ASSURE => $literal->getLang() ?? $this->langValue,
                 PropertyMapping::LANG_OVERWRITE => $this->langValue,
                 PropertyMapping::LANG_REMOVE => null,
-                default => throw new RuntimeException("Unsupported lang tag processing mode $process"),
+                default => throw new RuntimeException("Unsupported lang tag processing mode $this->langProcess"),
             };
             $lang          ??= '';
             $counts[$lang] = ($counts[$lang] ?? 0) + 1;
             if ($counts[$lang] <= $this->maxPerLang) {
+                /** @phpstan-ignore method.notFound */
                 $toAdd = $literal->withLang($lang);
                 if (!empty($this->datatype)) {
                     $toAdd = $toAdd->withDatatype($this->datatype);
@@ -275,11 +282,7 @@ class PropertyMapping {
 
     /**
      * 
-     * @param DatasetInterface $meta
-     * @param NamedNodeInterface $sbj
-     * @param UriNormalizer $normalizer
      * @param array<NamedNodeInterface> $path
-     * @return DatasetInterface
      */
     private function resolveRecursively(DatasetInterface $meta,
                                         TermInterface $sbj,

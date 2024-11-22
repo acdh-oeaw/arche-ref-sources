@@ -29,7 +29,7 @@ namespace acdhOeaw\arche\refSources;
 use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerException;
-use acdhOeaw\arche\lib\Repo;
+use acdhOeaw\arche\lib\RepoInterface;
 use acdhOeaw\arche\lib\RepoResource;
 use rdfInterface\DatasetNodeInterface;
 
@@ -43,7 +43,7 @@ class NamedEntityRepo implements NamedEntityInterface {
     use NamedEntityTrait;
 
     private RepoResource $res;
-    private Repo $repo;
+    private RepoInterface $repo;
 
     public function __construct(RepoResource $res) {
         $this->res  = $res;
