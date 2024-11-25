@@ -119,26 +119,26 @@ $crawler    = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
 $dateFilter = !empty($param->after) ? $param->after : '';
 $idFilter   = !empty($param->id) ? "^" . (string) $param->id . "$" : null;
 foreach ($crawler->crawl($source, $dateFilter, $idFilter, $param->limit) as $data) {
-    list($entityMeta, $entityMetaOrig) = $data;
-    $newData = $entityMeta->getDataset()->copyExcept($entityMetaOrig);
+    /** @var acdhOeaw\arche\refSources\ProcessEntityResult $data */
+    $newData = $data->newData->getDataset()->copyExcept($data->oldData);
     $log->debug("    new data fetched: \n      " . trim(str_replace("\n", "\n      ", (string) $newData)));
 
     // save entity's metadata
     if ($param->mode >= MODE_TEST && count($newData) > 0) {
-        $log->info("  updating ARCHE resource " . ($param->mode === MODE_TEST ? '(test)' : ''));
-        try {
-            $merged = $entity->updateMetadata($entityMeta, $param->mode === MODE_TEST);
-            foreach ($merged as $i) {
-                $processed[$i] = 1;
-            }
-            $merged = count($merged) > 0 ? '(merged with: ' . implode(', ', $merged) . ')' : '';
-            $log->info("    succeeded $merged");
-        } catch (\Exception $e) {
-            $log->error("    failed with: " . ($param->verbose ? print_r($e, true) : $e->getMessage()));
-        }
+//        $log->info("  updating ARCHE resource " . ($param->mode === MODE_TEST ? '(test)' : ''));
+//        try {
+//            $merged = $data->updateMetadata($entityMeta, $param->mode === MODE_TEST);
+//            foreach ($merged as $i) {
+//                $processed[$i] = 1;
+//            }
+//            $merged = count($merged) > 0 ? '(merged with: ' . implode(', ', $merged) . ')' : '';
+//            $log->info("    succeeded $merged");
+//        } catch (\Exception $e) {
+//            $log->error("    failed with: " . ($param->verbose ? print_r($e, true) : $e->getMessage()));
+//        }
     }
     if (isset($output)) {
-        ioUtil::serialize($entityMeta, 'text/turtle', $output, $nmsp);
+//        ioUtil::serialize($entityMeta, 'text/turtle', $output, $nmsp);
     }
 }
 
