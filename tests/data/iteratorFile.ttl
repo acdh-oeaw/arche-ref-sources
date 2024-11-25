@@ -1,0 +1,16 @@
+<http://person1>    a                   <http://person>;
+                    <http://id>         <http://res1>;
+                    <http://modDate>    "2024-11-25T11:21:15".
+<http://person2>    a                   <http://person>;
+                    <http://id>         <http://person2>;
+                    <http://modDate>    "2024-09-25T11:21:15".
+<http://person3>    a                   <http://person>;
+                    <http://id>         <http://person3>;
+                    <http://modDate>    "2024-07-25T11:21:15".
+<http://place1>     a                   <http://place>;
+                    <http://id>         <http://place1>;
+                    <http://modDate>    "2024-10-25T11:21:15".
+<http://place2>     a                   <http://place>;
+                    <http://id>         <http://place2>;
+                    <http://modDate>    "2024-08-25T11:21:15".
+<http://other>      <http://id>         <http://other>.

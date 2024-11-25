@@ -30,11 +30,11 @@ use quickRdf\Dataset;
 use quickRdf\DatasetNode;
 use quickRdf\DataFactory;
 use termTemplates\QuadTemplate as QT;
+use termTemplates\PredicateTemplate as PT;
 use termTemplates\ValueTemplate as VT;
 use quickRdfIo\Util as ioUtil;
 use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Schema;
-use acdhOeaw\arche\lib\Repo;
 
 /**
  * Description of NamedEntityIteratorFile
@@ -51,7 +51,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
      * @var array<\termTemplates\QuadTemplate>
      */
     private array $filters = [];
-    private ?int $limit   = null;
+    private ?int $limit    = null;
 
     /**
      * 
@@ -75,13 +75,13 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
                               ?string $minModDate = null, ?int $limit = null): void {
         $this->filters = [];
         if (!empty($class)) {
-            $this->filters[] = new QT(null, DataFactory::namedNode(RDF::RDF_TYPE), DataFactory::namedNode($class));
+            $this->filters[] = new PT(DataFactory::namedNode(RDF::RDF_TYPE), DataFactory::namedNode($class));
         }
         if (!empty($idMatch)) {
-            $this->filters[] = new QT(null, DataFactory::namedNode($this->schema->id), new VT("`$idMatch`", VT::REGEX));
+            $this->filters[] = new PT($this->schema->id, new VT("`$idMatch`", VT::REGEX));
         }
         if (!empty($minModDate)) {
-            $this->filters[] = new QT(null, DataFactory::namedNode($this->schema->modificationDate), new VT($minModDate, VT::GREATER_EQUAL));
+            $this->filters[] = new PT($this->schema->modificationDate, new VT($minModDate, VT::GREATER_EQUAL));
         }
         $this->limit = $limit;
         unset($this->matching);
@@ -98,7 +98,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
         }
     }
 
-    public function getCount(): int {
+    public function count(): int {
         if (!isset($this->matching)) {
             $this->findMatching();
         }

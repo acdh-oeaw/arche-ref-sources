@@ -40,8 +40,6 @@ use rdfInterface\DatasetNodeInterface;
  */
 class NamedEntityRepo implements NamedEntityInterface {
 
-    use NamedEntityTrait;
-
     private RepoResource $res;
     private RepoInterface $repo;
 

@@ -80,7 +80,7 @@ class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
         }
     }
 
-    public function getCount(): int {
+    public function count(): int {
         return $this->searchConfig->count ?? 0;
     }
 }

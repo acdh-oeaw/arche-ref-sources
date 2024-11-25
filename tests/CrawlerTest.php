@@ -89,6 +89,10 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $this->runTestFromData('wikidataPlace');
     }
 
+    public function testCrawlingOrder(): void {
+        $this->runTestFromData('crawlingOrder');
+    }
+
     private function runTestFromData(string $testName): void {
         $source   = new NamedEntityIteratorFile(__DIR__ . "/data/$testName.input", self::$schema, 'text/turtle');
         $crawler  = $this->getCrawler($testName);
@@ -102,10 +106,11 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $oldMeta    = new Dataset();
         $mergedMeta = new Dataset();
         foreach ($crawler->crawl($source) as $data) {
-            $mergedMeta->add($data[0]);
-            $oldMeta->add($data[1]);
+            /** @var \acdhOeaw\arche\refSources\ProcessEntityResult $data */
+            $mergedMeta->add($data->newData);
+            $oldMeta->add($data->oldData);
         }
-//        echo "@@@\n".\quickRdfIo\Util::serialize($mergedMeta, 'text/turtle')."\n";
+        //echo "@@@\n".\quickRdfIo\Util::serialize($mergedMeta, 'text/turtle')."\n";
         // for more meaningfull failure messages let's compare differences with ''
         $this->assertEquals('', RdfIoUtil::serialize($expected->copyExcept($mergedMeta), 'text/turtle'), 'Missing in merged metadata');
         $this->assertEquals('', RdfIoUtil::serialize($mergedMeta->copyExcept($expected), 'text/turtle'), 'Additional in merged metadata');

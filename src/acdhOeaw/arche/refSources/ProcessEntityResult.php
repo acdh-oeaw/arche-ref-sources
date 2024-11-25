@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2021 Austrian Centre for Digital Humanities.
+ * Copyright 2024 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,20 +26,19 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use Generator;
+use rdfInterface\DatasetNodeInterface;
+use rdfInterface\DatasetInterface;
 
 /**
+ * Description of ProcessEntityResult
  *
  * @author zozlak
  */
-interface NamedEntityIteratorInterface extends \Countable {
+class ProcessEntityResult {
 
-    public function setFilter(?string $class = null, ?string $idMatch = null,
-                              ?string $minModDate = null, ?int $limit = null): void;
-
-    /**
-     * 
-     * @return Generator<NamedEntityInterface>
-     */
-    public function getNamedEntities(): Generator;
+    function __construct(public NamedEntityInterface $entity,
+                         public DatasetNodeInterface $newData,
+                         public DatasetInterface $oldData) {
+        
+    }
 }

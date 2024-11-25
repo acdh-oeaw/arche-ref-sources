@@ -59,8 +59,7 @@ class Crawler {
 
     /**
      * 
-     * @param NamedEntityIteratorInterface $source
-     * @return Generator<array<DatasetInterface>>
+     * @return Generator<ProcessEntityResult>
      */
     public function crawl(NamedEntityIteratorInterface $source,
                           string $dateFilter = '',
@@ -75,7 +74,7 @@ class Crawler {
 
             $N = 1;
             foreach ($source->getNamedEntities() as $entity) {
-                $NT = $source->getCount();
+                $NT = $source->count();
                 $NN = round(100 * $N / $NT);
                 $this->log?->info("  " . $entity->getUri() . " ($N/$NT $NN%)");
                 $N++;
@@ -92,11 +91,7 @@ class Crawler {
         }
     }
 
-    /**
-     * 
-     * @return array<DatasetInterface>
-     */
-    private function processEntity(NamedEntityInterface $entity): array {
+    private function processEntity(NamedEntityInterface $entity): ProcessEntityResult {
         // collect data from all external databases reachable from this entity
         $entityExtMeta = [];
         $idsToProcess  = $entity->getIdentifiers($this->normalizer);
@@ -125,6 +120,8 @@ class Crawler {
                 $this->log?->debug("      unsupported source: " . $e->getMessage());
             }
         }
+        $dbNames = $this->mappings->getDbNames();
+        uksort($entityExtMeta, fn($a, $b) => array_search($a, $dbNames) <=> array_search($b, $dbNames));
 
         // update entity's metadata
         $entityMeta     = $entity->getMetadata();
@@ -139,6 +136,60 @@ class Crawler {
             }
         }
         // return merged and original metadata
-        return [$entityMeta, $entityMetaOrig];
+        return new ProcessEntityResult($entity, $entityMeta, $entityMetaOrig);
     }
+//    private function updateMetadata(Repo $repo, DatasetNodeInterface $meta,
+//                                    bool $test = true): array {
+//        if ($repo->inTransaction()) {
+//            $repo->rollback();
+//        }
+//        $schema = $repo->getSchema();
+//
+//        // merge all matching resources
+//        $merged                 = [];
+//        $ids                    = $meta->listObjects(new PT($schema->id))->getValues();
+//        $st                     = new SearchTerm($schema->id, $ids, '=');
+//        $sc                     = new SearchConfig();
+//        $sc->metadataMode       = RepoResource::META_RESOURCE;
+//        $sc->resourceProperties = [$schema->creationDate];
+//        try {
+//            $mainUri       = $meta->getNode()->getValue();
+//            $repoResources = $repo->getResourcesBySearchTerms([$st], $sc);
+//            $repoResources = iterator_to_array($repoResources);
+//            // check if $meta's node makes sense and substitute if not
+//            $inRepo        = array_sum(array_map(fn($x) => $x->getUri() === $mainUri, $repoResources));
+//            if ($inRepo === 0) {
+//                $mainUri = $repoResources[0]->getUri();
+//            }
+//            $mainRes = array_filter($repoResources, fn($x) => $x->getUri() === $mainUri);
+//            /* @var RepoResource $mainRes */
+//            $mainRes = reset($mainRes);
+//
+//            // merge all matching repo resources with the main one
+//            $repo->begin();
+//            foreach ($repoResources as $repoResource) {
+//                /* @var RepoResource $repoResource */
+//                if ($repoResource->getUri() === $mainUri) {
+//                    continue;
+//                }
+//                $merged[] = $repoResource->getUri();
+//                $repoResource->merge($mainUri, RepoResource::META_NONE);
+//            }
+//
+//            // update the main resource
+//            $mainRes->setMetadata($meta);
+//            $mainRes->updateMetadata(RepoResource::UPDATE_MERGE);
+//        } catch (NotFound) {
+//            $repo->begin();
+//            $repo->createResource($meta);
+//        }
+//        if ($test) {
+//            $repo->rollback();
+//        } else {
+//            $repo->commit();
+//        }
+//
+//        // return merge results
+//        return $merged;
+//    }
 }

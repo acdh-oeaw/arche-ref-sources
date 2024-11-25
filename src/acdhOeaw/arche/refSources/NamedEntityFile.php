@@ -39,8 +39,6 @@ use acdhOeaw\UriNormalizerException;
  */
 class NamedEntityFile implements NamedEntityInterface {
 
-    use NamedEntityTrait;
-
     private DatasetNodeInterface $node;
     private NamedEntityIteratorFile $iter;
 

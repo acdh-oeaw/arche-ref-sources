@@ -1,0 +1,13 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://someRes>    a                           acdh:Person;
+                    acdh:hasIdentifier          <http://someRes>,
+                                                <http://viaf.org/viaf/74650358>,
+                                                <https://d-nb.info/gnd/118838113>,
+                                                <http://www.wikidata.org/entity/Q213722>;
+                    acdh:hasTitle               "Montgelas, Maximilian Joseph von"@und;
+                    acdh:hasFirstName           "Maximilian Joseph"@und;
+                    acdh:hasLastName            "Garnerin"@und;
+                    acdh:hasAlternativeTitle    "Garnerin von Montgelas, Maximilian Joseph de"@und, 
+                                                "Conde de Montgelas"@und.
+                                                                

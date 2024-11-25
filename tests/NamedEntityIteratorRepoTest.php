@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2021 Austrian Centre for Digital Humanities.
+ * Copyright 2024 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,22 +24,13 @@
  * THE SOFTWARE.
  */
 
-namespace acdhOeaw\arche\refSources;
-
-use Generator;
+namespace acdhOeaw\arche\refSources\tests;
 
 /**
+ * Description of NamedEntityIteratorRepoTest
  *
  * @author zozlak
  */
-interface NamedEntityIteratorInterface extends \Countable {
-
-    public function setFilter(?string $class = null, ?string $idMatch = null,
-                              ?string $minModDate = null, ?int $limit = null): void;
-
-    /**
-     * 
-     * @return Generator<NamedEntityInterface>
-     */
-    public function getNamedEntities(): Generator;
+class NamedEntityIteratorRepoTest extends \PHPUnit\Framework\TestCase {
+    //put your code here
 }
