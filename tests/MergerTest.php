@@ -171,7 +171,6 @@ class MergerTest extends \PHPUnit\Framework\TestCase {
         fseek($output, 0);
         $result->add(RdfIoUtil::parse($output, new DF(), 'text/turtle'));
         $resources = $result->listSubjects()->getValues();
-        print_r($resources);
         $resources = array_map(fn($x) => new RepoResource($x, $repo), $resources);
         $data = $this->collectResMetadata($resources);
         $this->sanitizeResMetadata($data);

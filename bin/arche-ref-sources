@@ -29,8 +29,9 @@ use Psr\Log\LogLevel;
 use zozlak\argparse\ArgumentParser as AP;
 use zozlak\logging\Log;
 use quickRdf\DataFactory as DF;
+use quickRdf\Dataset;
 use quickRdf\DatasetNode;
-use quickRdfIo\Util as ioUtil;
+use quickRdfIo\Util as RdfIoUtil;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormRules;
 use acdhOeaw\UriNormalizerRule;
@@ -38,6 +39,7 @@ use acdhOeaw\UriNormalizerCache;
 use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\refSources\Crawler;
+use acdhOeaw\arche\refSources\Merger;
 use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
 use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
 use acdhOeaw\arche\refSources\NamedEntityIteratorInterface;
@@ -100,11 +102,8 @@ $guzzleOpts = [
 ];
 $repo       = Repo::factoryFromUrl($param->repositoryUrl ?? $cfg->repositoryUrl ?? die("ARCHE repository URL unknown"), $guzzleOpts);
 // Output initialization
+$output     = null;
 if (!empty($param->output) && $param->mode >= MODE_PARSE) {
-    $nmsp = new quickRdf\RdfNamespace();
-    foreach ($cfg->namespaces ?? [] as $alias => $prefix) {
-        $nmsp->add($prefix, $alias);
-    }
     $output = fopen($param->output, 'w');
 }
 
@@ -115,35 +114,42 @@ if (!empty($param->inputFile)) {
 } else {
     $source = new NamedEntityIteratorRepo($repo);
 }
-$crawler    = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
 $dateFilter = !empty($param->after) ? $param->after : '';
-$idFilter   = !empty($param->id) ? "^" . (string) $param->id . "$" : null;
-foreach ($crawler->crawl($source, $dateFilter, $idFilter, $param->limit) as $data) {
-    /** @var acdhOeaw\arche\refSources\ProcessEntityResult $data */
-    $newData = $data->newData->getDataset()->copyExcept($data->oldData);
-    $log->debug("    new data fetched: \n      " . trim(str_replace("\n", "\n      ", (string) $newData)));
+$idFilter   = null;
+if (!empty($param->id)) {
+    $idFilter = "^$param->id$";
+} elseif (!empty($param->extDbName)) {
+    $idFilter = UriNormRules::getRules([$param->extDbName]);
+    $idFilter = reset($idFilter)?->match;
+}
+$source->setFilter(null, $idFilter, $dateFilter, $param->limit);
 
-    // save entity's metadata
-    if ($param->mode >= MODE_TEST && count($newData) > 0) {
-//        $log->info("  updating ARCHE resource " . ($param->mode === MODE_TEST ? '(test)' : ''));
-//        try {
-//            $merged = $data->updateMetadata($entityMeta, $param->mode === MODE_TEST);
-//            foreach ($merged as $i) {
-//                $processed[$i] = 1;
-//            }
-//            $merged = count($merged) > 0 ? '(merged with: ' . implode(', ', $merged) . ')' : '';
-//            $log->info("    succeeded $merged");
-//        } catch (\Exception $e) {
-//            $log->error("    failed with: " . ($param->verbose ? print_r($e, true) : $e->getMessage()));
-//        }
-    }
-    if (isset($output)) {
-//        ioUtil::serialize($entityMeta, 'text/turtle', $output, $nmsp);
+$data    = new Dataset();
+$crawler = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
+foreach ($crawler->crawl($source) as $entityData) {
+    /** @var acdhOeaw\arche\refSources\ProcessEntityResult $entityData */
+    $diff = $entityData->newData->copyExcept($entityData->oldData);
+    if (count($diff) > 0) {
+        $log->debug("    new data fetched:\n      " . trim(str_replace("\n", "\n      ", (string) $diff)));
+        $data->add($entityData->newData);
     }
 }
 
+// Merge and update
+$merger = new Merger($repo, $log);
+$merger->merge($data);
+if ($param->mode >= MODE_TEST) {
+    $merger->update($data, $param->mode <= MODE_TEST, $output);
+} else {
+    $nmsp = new quickRdf\RdfNamespace();
+    foreach ($cfg->namespaces ?? [] as $alias => $prefix) {
+        $nmsp->add($prefix, $alias);
+    }
+    RdfIoUtil::serialize($data, 'text/turtle', $output, $nmsp);
+}
 
-if (isset($output)) {
+// Finish
+if ($output !== null) {
     fclose($output);
 }
 if (!empty($param->afterFile)) {
