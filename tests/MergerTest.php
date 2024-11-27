@@ -63,15 +63,14 @@ class MergerTest extends \PHPUnit\Framework\TestCase {
     public function setUp(): void {
         parent::setUp();
 
-        self::$pdo->query("DELETE FROM resources WHERE id > 499");
         $this->resIdMax = self::$pdo->query("SELECT max(id) FROM resources")->fetchColumn();
     }
 
     public function tearDown(): void {
         parent::tearDown();
 
-        #$query = self::$pdo->prepare("DELETE FROM resources WHERE id > ?");
-        #$query->execute([$this->resIdMax]);
+        $query = self::$pdo->prepare("DELETE FROM resources WHERE id > ?");
+        $query->execute([$this->resIdMax]);
     }
 
     public function testMerge(): void {
@@ -123,7 +122,7 @@ class MergerTest extends \PHPUnit\Framework\TestCase {
         $this->assertEquals('', RdfIoUtil::serialize($curData->copyExcept($origData), 'text/turtle'), 'Added by the update()');
         $this->assertEquals('', RdfIoUtil::serialize($refData->copyExcept($outData), 'text/turtle'), 'Missing data');
         $this->assertEquals('', RdfIoUtil::serialize($outData->copyExcept($refData), 'text/turtle'), 'Additional data');
-        
+
         // update scenario - repository resources and output should match and contain merged data
         $output  = tmpfile();
         $merger->update($inData, false, $output);
@@ -172,7 +171,7 @@ class MergerTest extends \PHPUnit\Framework\TestCase {
         $result->add(RdfIoUtil::parse($output, new DF(), 'text/turtle'));
         $resources = $result->listSubjects()->getValues();
         $resources = array_map(fn($x) => new RepoResource($x, $repo), $resources);
-        $data = $this->collectResMetadata($resources);
+        $data      = $this->collectResMetadata($resources);
         $this->sanitizeResMetadata($data);
         return $data;
     }
