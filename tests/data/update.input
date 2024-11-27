@@ -1,0 +1,23 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#>.
+
+<https://d-nb.info/gnd/118838113>
+    a                   acdh:Person;
+    acdh:hasIdentifier  <https://d-nb.info/gnd/118838113>,
+                        <http://viaf.org/viaf/74650358>, 
+                        <http://www.wikidata.org/entity/Q213722>;
+    acdh:hasFirstName   "Maximilian"@und;
+    acdh:hasLastName    "Montgelas"@und.
+
+<https://d-nb.info/gnd/2016751-9>
+    a                   acdh:Organisation;
+    acdh:hasIdentifier  <https://d-nb.info/gnd/2016751-9>,
+                        <https://d-nb.info/gnd/108617416X>,
+                        <https://d-nb.info/gnd/4070561-4>,
+                        <http://viaf.org/viaf/126584224>,
+                        <http://www.wikidata.org/entity/Q95569>;
+    acdh:hasTitle       "Kunsthistorisches Museum Wien"@de.
+
+<https://d-nb.info/gnd/10056703-4>
+    a                   acdh:Organisation;
+    acdh:hasIdentifier  <https://d-nb.info/gnd/10056703-4>;
+    acdh:hasTitle       "Verein der Freunde des Kunsthistorischen Museums"@de.

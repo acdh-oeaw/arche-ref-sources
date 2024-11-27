@@ -5,3 +5,5 @@
 /*.ttl*
 /.phpunit.cache
 /build
+/config
+/log

@@ -32,7 +32,7 @@ use quickRdf\DataFactory;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\PredicateTemplate as PT;
 use termTemplates\ValueTemplate as VT;
-use quickRdfIo\Util as ioUtil;
+use quickRdfIo\Util as RdfIoUtil;
 use zozlak\RdfConstants as RDF;
 use acdhOeaw\arche\lib\Schema;
 
@@ -67,7 +67,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
     public function __construct(mixed $rdfFilePath, Schema $schema,
                                 string | null $format = null) {
         $this->graph  = new Dataset();
-        $this->graph->add(ioUtil::parse($rdfFilePath, new DataFactory(), $format));
+        $this->graph->add(RdfIoUtil::parse($rdfFilePath, new DataFactory(), $format));
         $this->schema = $schema;
     }
 

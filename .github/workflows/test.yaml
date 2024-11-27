@@ -26,6 +26,17 @@ jobs:
     - name: phpstan
       run: |
         vendor/bin/phpstan analyze -l 6 src tests bin/*
+    - name: clone repo config
+      run: |
+        git clone --depth 1 --branch arche https://github.com/acdh-oeaw/arche-docker-config.git config
+        chmod -x config/run.d/* config/initScripts/30-dissServices.php
+        chmod +x config/run.d/98-xdebug.sh config/run.d/10-postgresql.sh config/run.d/15-config-yaml.sh
+        cp .github/workflows/99-postgresqlConfig.sh config/run.d/
+        cp .github/workflows/30-fixVocabularies.sh config/initScripts/
+    - name: run repo docker
+      run: |
+        mkdir log
+        docker run --name arche -p 80:80 -p 5432:5432 -v `pwd`/log:/home/www-data/log -v `pwd`/config:/home/www-data/config -e USER_UID=`id -u` -e USER_GID=`id -g` -e ADMIN_PSWD=admin -d acdhch/arche
     - name: phpunit
       run: |
         XDEBUG_MODE=coverage vendor/bin/phpunit

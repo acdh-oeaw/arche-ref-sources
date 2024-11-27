@@ -61,33 +61,15 @@ class Crawler {
      * 
      * @return Generator<ProcessEntityResult>
      */
-    public function crawl(NamedEntityIteratorInterface $source,
-                          string $dateFilter = '',
-                          string | null $idFilter = null,
-                          int | null $limit = null): Generator {
-        $processed = [];
-        foreach ($this->mappings->getDbNames() as $extDbName) {
-            $this->log?->info("### Processing resources from $extDbName");
-
-            $idFilterTmp = $idFilter ?? $this->mappings->getRule($extDbName)->match;
-            $source->setFilter(null, $idFilterTmp, $dateFilter, $limit);
-
-            $N = 1;
-            foreach ($source->getNamedEntities() as $entity) {
-                $NT = $source->count();
-                $NN = round(100 * $N / $NT);
-                $this->log?->info("  " . $entity->getUri() . " ($N/$NT $NN%)");
-                $N++;
-
-                $entityUri = $entity->getUri();
-                if (isset($processed[$entityUri])) {
-                    $this->log?->info("    already processed");
-                    continue;
-                }
-                $processed[$entity->getUri()] = 1;
-
-                yield $this->processEntity($entity);
-            }
+    public function crawl(NamedEntityIteratorInterface $source): Generator {
+        $this->log?->info("### Crawling source entities");
+        $NT = $source->count();
+        $N  = 1;
+        foreach ($source->getNamedEntities() as $entity) {
+            $NN = round(100 * $N / $NT);
+            $this->log?->info($entity->getUri() . " ($N/$NT $NN%)");
+            $N++;
+            yield $this->processEntity($entity);
         }
     }
 
@@ -117,7 +99,7 @@ class Crawler {
                     }
                 }
             } catch (RefSourcesException | UriNormalizerException $e) {
-                $this->log?->debug("      unsupported source: " . $e->getMessage());
+                $this->log?->debug("    unsupported source: " . $e->getMessage());
             }
         }
         $dbNames = $this->mappings->getDbNames();
@@ -136,60 +118,6 @@ class Crawler {
             }
         }
         // return merged and original metadata
-        return new ProcessEntityResult($entity, $entityMeta, $entityMetaOrig);
+        return new ProcessEntityResult($entityMeta, $entityMetaOrig);
     }
-//    private function updateMetadata(Repo $repo, DatasetNodeInterface $meta,
-//                                    bool $test = true): array {
-//        if ($repo->inTransaction()) {
-//            $repo->rollback();
-//        }
-//        $schema = $repo->getSchema();
-//
-//        // merge all matching resources
-//        $merged                 = [];
-//        $ids                    = $meta->listObjects(new PT($schema->id))->getValues();
-//        $st                     = new SearchTerm($schema->id, $ids, '=');
-//        $sc                     = new SearchConfig();
-//        $sc->metadataMode       = RepoResource::META_RESOURCE;
-//        $sc->resourceProperties = [$schema->creationDate];
-//        try {
-//            $mainUri       = $meta->getNode()->getValue();
-//            $repoResources = $repo->getResourcesBySearchTerms([$st], $sc);
-//            $repoResources = iterator_to_array($repoResources);
-//            // check if $meta's node makes sense and substitute if not
-//            $inRepo        = array_sum(array_map(fn($x) => $x->getUri() === $mainUri, $repoResources));
-//            if ($inRepo === 0) {
-//                $mainUri = $repoResources[0]->getUri();
-//            }
-//            $mainRes = array_filter($repoResources, fn($x) => $x->getUri() === $mainUri);
-//            /* @var RepoResource $mainRes */
-//            $mainRes = reset($mainRes);
-//
-//            // merge all matching repo resources with the main one
-//            $repo->begin();
-//            foreach ($repoResources as $repoResource) {
-//                /* @var RepoResource $repoResource */
-//                if ($repoResource->getUri() === $mainUri) {
-//                    continue;
-//                }
-//                $merged[] = $repoResource->getUri();
-//                $repoResource->merge($mainUri, RepoResource::META_NONE);
-//            }
-//
-//            // update the main resource
-//            $mainRes->setMetadata($meta);
-//            $mainRes->updateMetadata(RepoResource::UPDATE_MERGE);
-//        } catch (NotFound) {
-//            $repo->begin();
-//            $repo->createResource($meta);
-//        }
-//        if ($test) {
-//            $repo->rollback();
-//        } else {
-//            $repo->commit();
-//        }
-//
-//        // return merge results
-//        return $merged;
-//    }
 }

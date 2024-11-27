@@ -36,8 +36,7 @@ use rdfInterface\DatasetInterface;
  */
 class ProcessEntityResult {
 
-    function __construct(public NamedEntityInterface $entity,
-                         public DatasetNodeInterface $newData,
+    function __construct(public DatasetNodeInterface $newData,
                          public DatasetInterface $oldData) {
         
     }

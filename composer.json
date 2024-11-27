@@ -27,7 +27,8 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^10",
-        "phpstan/phpstan": "^1"
+        "phpstan/phpstan": "^1",
+        "acdh-oeaw/arche-lib-ingest": "^4.0"
     },
     "autoload-dev": {
         "psr-4": {

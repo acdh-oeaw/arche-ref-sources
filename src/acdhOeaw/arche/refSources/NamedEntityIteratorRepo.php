@@ -68,12 +68,19 @@ class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
         if (!empty($minModDate)) {
             $this->searchTerms[] = new SearchTerm($this->schema->modificationDate, $minModDate, '>=', SearchTerm::TYPE_DATETIME);
         }
+        if (count($this->searchTerms) === 0) {
+            throw new RefSourcesException('At least one filter has to be defined');
+        }
 
         $this->searchConfig               = new SearchConfig();
         $this->searchConfig->limit        = $limit;
         $this->searchConfig->metadataMode = RepoResourceInterface::META_RESOURCE;
     }
 
+    /**
+     * 
+     * @return \Generator<NamedEntityRepo>
+     */
     public function getNamedEntities(): \Generator {
         foreach ($this->repo->getResourcesBySearchTerms($this->searchTerms, $this->searchConfig) as $res) {
             yield new NamedEntityRepo($res);
@@ -81,6 +88,6 @@ class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
     }
 
     public function count(): int {
-        return $this->searchConfig->count ?? 0;
+        return min($this->searchConfig->count ?? 0, $this->searchConfig->limit ?? PHP_INT_MAX);
     }
 }

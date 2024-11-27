@@ -1,0 +1,31 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#>.
+
+<http://res4>   acdh:hasIdentifier          <http://res4>,
+                                            <http://res3>.
+
+<http://res3>   acdh:hasIdentifier          <http://res3>,
+                                            <http://www.wikidata.org/entity/Q213722>;
+                acdh:hasTitle               "res3"@und;
+                acdh:res2prop               "res2prop res3";
+                acdh:res3prop               "res3prop value".
+
+<http://res2>   a                           acdh:Person;
+                acdh:hasIdentifier          <http://res2>, 
+                                            <http://viaf.org/viaf/74650358>,
+                                            <http://www.wikidata.org/entity/Q213722>,
+                                            <https://d-nb.info/gnd/118838113>;
+                acdh:hasTitle               "res1"@und;
+                acdh:res2prop               "res2prop value";
+                acdh:hasLastName            "lastName res2"@und;
+                acdh:hasAlternativeTitle    "alt name res2 - 1"@und,
+                                            "alt name res2 - 2"@und.
+
+<http://res1>   a                           acdh:Person;
+                acdh:hasIdentifier          <http://res1>, 
+                                            <http://viaf.org/viaf/74650358>, 
+                                            <http://www.wikidata.org/entity/Q213722>;
+                acdh:hasTitle               "res2"@und;
+                acdh:res1prop               "res1prop value";
+                acdh:hasFirstName           "firstName res1"@und;
+                acdh:hasAlternativeTitle    "alt name res1 - 1"@und,
+                                            "alt name res1 - 2"@und.
