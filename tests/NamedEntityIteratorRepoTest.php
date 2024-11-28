@@ -72,7 +72,7 @@ class NamedEntityIteratorRepoTest extends \PHPUnit\Framework\TestCase {
 
         $iter->setFilter(class: $schema->classes->person);
         $iter->getNamedEntities()->current();
-        $this->assertEquals(19, $iter->count());
+        $this->assertEquals(18, $iter->count());
 
         $iter->setFilter(class: $schema->classes->place);
         $iter->getNamedEntities()->current();
