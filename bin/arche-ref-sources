@@ -67,7 +67,7 @@ $parser->addArgument('--after', help: 'process only resources modified after a g
 $parser->addArgument('--afterFile', help: 'process only resources modified after a date stored in a given file and updates the file content at the end');
 $parser->addArgument('--id', help: 'process only resource with a given id');
 $parser->addArgument('--extDbName', help: 'process only resource from a given external authority file');
-$parser->addArgument('--repoUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
+$parser->addArgument('--repositoryUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
 $parser->addArgument('--inputFile', help: 'read resources from a given RDF file instead of the ARCHE repository');
 $parser->addArgument('--user', help: 'user name used for repository authentication (not important in mode "test", "parse" and "resolve")');
 $parser->addArgument('--pswd', help: 'password used for repository authentication (not important in mode "test", "parse" and "resolve")');
@@ -90,9 +90,6 @@ if ($param->verbose) {
 
 // Configuration initialization
 $cfg = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
-if (!empty($param->extDbName)) {
-    $cfg->referenceSources = (object) array_filter((array) $cfg->referenceSources, fn($v, $k) => $k === $param->extDbName, ARRAY_FILTER_USE_BOTH);
-}
 // Repo object initialization
 $guzzleOpts = [
     'auth' => [
@@ -115,23 +112,35 @@ if (!empty($param->inputFile)) {
     $source = new NamedEntityIteratorRepo($repo);
 }
 $dateFilter = !empty($param->after) ? $param->after : '';
-$idFilter   = null;
 if (!empty($param->id)) {
-    $idFilter = "^$param->id$";
+    $idFilters = ["^$param->id$"];
 } elseif (!empty($param->extDbName)) {
-    $idFilter = UriNormRules::getRules([$param->extDbName]);
-    $idFilter = reset($idFilter)?->match;
+    $idFilters = UriNormRules::getRules([$param->extDbName]);
+    $idFilters = array_map(fn($x) => $x->match, $idFilters);
+} else {
+    $idFilters = UriNormRules::getRules(array_keys(get_object_vars($cfg->referenceSources)));
+    $idFilters = array_map(fn($x) => $x->match, $idFilters);
 }
-$source->setFilter(null, $idFilter, $dateFilter, $param->limit);
 
+$limit   = $param->limit;
 $data    = new Dataset();
 $crawler = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
-foreach ($crawler->crawl($source) as $entityData) {
-    /** @var acdhOeaw\arche\refSources\ProcessEntityResult $entityData */
-    $diff = $entityData->newData->copyExcept($entityData->oldData);
-    if (count($diff) > 0) {
-        $log->debug("    new data fetched:\n      " . trim(str_replace("\n", "\n      ", (string) $diff)));
-        $data->add($entityData->newData);
+foreach ($idFilters as $idFilter) {
+    $source->setFilter(null, $idFilter, $dateFilter, $limit);
+    $log->info("### idFilter: $idFilter");
+    foreach ($crawler->crawl($source) as $entityData) {
+        /** @var acdhOeaw\arche\refSources\ProcessEntityResult $entityData */
+        $diff = $entityData->newData->copyExcept($entityData->oldData);
+        if (count($diff) > 0) {
+            $log->debug("    new data fetched:\n      " . trim(str_replace("\n", "\n      ", (string) $diff)));
+            $data->add($entityData->newData);
+        } else {
+            $log->info("    no new data");
+        }
+        $limit--;
+    }
+    if ($limit <= 0) {
+        break;
     }
 }
 

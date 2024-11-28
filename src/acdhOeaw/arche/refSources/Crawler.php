@@ -63,9 +63,10 @@ class Crawler {
      */
     public function crawl(NamedEntityIteratorInterface $source): Generator {
         $this->log?->info("### Crawling source entities");
-        $NT = $source->count();
+        $NT = null;
         $N  = 1;
         foreach ($source->getNamedEntities() as $entity) {
+            $NT ??= $source->count(); // valid only after iterator initialization
             $NN = round(100 * $N / $NT);
             $this->log?->info($entity->getUri() . " ($N/$NT $NN%)");
             $N++;
