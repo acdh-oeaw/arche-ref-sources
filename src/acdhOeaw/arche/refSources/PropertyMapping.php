@@ -90,7 +90,6 @@ class PropertyMapping {
         $this->maxPerLang     = $cfg->maxPerLang ?? PHP_INT_MAX;
         $this->preferredLangs = $cfg->preferredLangs ?? [];
         if (!empty($cfg->value)) {
-            /** @phpstan-ignore property.notFound */
             $this->value = $cfg->type === 'resource' ? DF::namedNode($cfg->value) : DF::literal($cfg->value);
         } else {
             $this->path = array_map(fn($x) => DF::namedNode($x), $cfg->path);
@@ -300,9 +299,7 @@ class PropertyMapping {
                 // just empty object - try to resolve it
                 try {
                     $newMeta = $normalizer->fetch($newSbj->getValue());
-                    if ($newMeta !== null) {
-                        $values->add($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
-                    }
+                    $values->add($this->resolveRecursively($newMeta, $newSbj, $normalizer, $path));
                 } catch (UriNormalizerException $e) {
                     echo "error: unable to resolve the URI: " . $e->getMessage() . "\n";
                 }
