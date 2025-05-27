@@ -1,0 +1,26 @@
+referenceSources:
+  viaf:
+    http://schema.org/Organization:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Organisation
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasIdentifier
+      action: add
+      type: id
+      path:
+      - http://schema.org/sameAs
+      # orcid in viaf seems strange - skipping
+      match: viaf.org|wikidata.org|d-nb.info
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      preferredLangs:
+      - en-GB
+      - en-US
+      - de-DE
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2004/02/skos/core#prefLabel

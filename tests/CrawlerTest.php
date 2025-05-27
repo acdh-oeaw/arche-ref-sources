@@ -61,8 +61,16 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $this->runTestFromData('gndOrganisation');
     }
 
-    public function testViaf(): void {
-        $this->runTestFromData('viaf');
+    public function testGndPlace(): void {
+        $this->runTestFromData('gndPlace');
+    }
+    
+    public function testViafPerson(): void {
+        $this->runTestFromData('viafPerson');
+    }
+
+    public function testViafOrganisation(): void {
+        $this->runTestFromData('viafOrganisation');
     }
 
     public function testOrcid(): void {
@@ -73,8 +81,20 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $this->runTestFromData('geonames');
     }
 
+    public function testGazetteer(): void {
+        $this->runTestFromData('gazetteer');
+    }
+
+    public function testPleiades(): void {
+        $this->runTestFromData('pleiades');
+    }
+
     public function testGetty(): void {
         $this->runTestFromData('getty');
+    }
+
+    public function testRor(): void {
+        $this->runTestFromData('ror');
     }
 
     public function testWikidataPerson(): void {
@@ -110,7 +130,7 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
             $mergedMeta->add($data->newData);
             $oldMeta->add($data->oldData);
         }
-        //echo "@@@\n".\quickRdfIo\Util::serialize($mergedMeta, 'text/turtle')."\n";
+//        echo "@@@\n".\quickRdfIo\Util::serialize($mergedMeta, 'text/turtle')."\n";
         // for more meaningfull failure messages let's compare differences with ''
         $this->assertEquals('', RdfIoUtil::serialize($expected->copyExcept($mergedMeta), 'text/turtle'), 'Missing in merged metadata');
         $this->assertEquals('', RdfIoUtil::serialize($mergedMeta->copyExcept($expected), 'text/turtle'), 'Additional in merged metadata');

@@ -1,0 +1,8 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://pleiades.stoa.org/places/786123>
+    a                           acdh:Place;
+    acdh:hasIdentifier          <https://pleiades.stoa.org/places/786123>;
+    acdh:hasTitle               "Syene"@und;
+    acdh:hasLatitude            "24.081158"^^<http://www.w3.org/2001/XMLSchema#float>;
+    acdh:hasLongitude           "32.89804"^^<http://www.w3.org/2001/XMLSchema#float>.

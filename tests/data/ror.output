@@ -1,0 +1,7 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://ror.org/05xs36f43>
+    a                           acdh:Organisation;
+    acdh:hasIdentifier          <https://ror.org/05xs36f43>;
+    acdh:hasTitle               "ULARE"@und;
+    acdh:hasUrl                 "https://www.ularepublica.cl/".

@@ -1,0 +1,11 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://gazetteer.dainst.org/place/2042816>
+    a                           acdh:Place;
+    acdh:hasIdentifier          <https://gazetteer.dainst.org/place/2042816>,
+                                <https://d-nb.info/gnd/4003469-0>,
+                                <https://sws.geonames.org/432858/>;
+    acdh:hasTitle               "Tell el-Dab'a"@und;
+    acdh:hasLatitude            "30.786944"^^<http://www.w3.org/2001/XMLSchema#float>;
+    acdh:hasLongitude           "31.822778"^^<http://www.w3.org/2001/XMLSchema#float>;
+    acdh:hasWkt                 "Point(31.822778 30.786944)".

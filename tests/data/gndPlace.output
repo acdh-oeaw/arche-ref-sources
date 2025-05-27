@@ -1,0 +1,11 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://d-nb.info/gnd/4066009-6>
+    a                           acdh:Place;
+    acdh:hasIdentifier          <https://d-nb.info/gnd/4066009-6>,
+                                <https://d-nb.info/gnd/1012345-3>,
+                                <http://viaf.org/viaf/238999862>,
+                                <http://www.wikidata.org/entity/Q1741>, 
+                                <https://sws.geonames.org/2761367/>;
+    acdh:hasTitle               "Wien"@und;
+    acdh:hasWkt                 "Point ( +016.371690 +048.208199 )"^^<http://www.opengis.net/ont/geosparql#wktLiteral>.

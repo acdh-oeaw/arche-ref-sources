@@ -1,0 +1,23 @@
+referenceSources:
+  ror:
+    unknownClass:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Organisation
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - names
+      - value0
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasUrl
+      action: add
+      type: literal
+      path:
+      - links
+      - value0
+
