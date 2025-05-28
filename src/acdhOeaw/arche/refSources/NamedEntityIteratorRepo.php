@@ -69,7 +69,6 @@ class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
             throw new RefSourcesException('At least one filter has to be defined. Iterating a whole repository is not allowed.');
         }
 
-        /** @var QueryPart $query */
         $query = "SELECT id FROM";
         $param = [];
         foreach ($filters as $n => $filter) {
@@ -102,7 +101,7 @@ class NamedEntityIteratorRepo implements NamedEntityIteratorInterface {
      */
     public function getNamedEntities(): \Generator {
         if (!isset($this->query)) {
-            throw new RuntimeExceptio("Set at least one filter first. Iterating a whole repository is not allowed.");
+            throw new RuntimeException("Set at least one filter first. Iterating a whole repository is not allowed.");
         }
         foreach ($this->repo->getResourcesBySqlQuery($this->query->query, $this->query->param, $this->searchConfig) as $res) {
             yield new NamedEntityRepo($res);
