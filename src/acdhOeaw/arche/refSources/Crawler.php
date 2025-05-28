@@ -30,6 +30,7 @@ use Generator;
 use Psr\Log\LoggerInterface;
 use rdfInterface\DatasetInterface;
 use rdfInterface\DatasetNodeInterface;
+use quickRdfIo\RdfIoException;
 use acdhOeaw\UriNormalizer;
 use acdhOeaw\UriNormalizerCache;
 use acdhOeaw\UriNormalizerException;
@@ -101,6 +102,8 @@ class Crawler {
                 }
             } catch (RefSourcesException | UriNormalizerException $e) {
                 $this->log?->debug("    unsupported source: " . $e->getMessage());
+            } catch (RdfIoException $e) {
+                $this->log?->warning("    " . $e->getMessage());
             }
         }
         $dbNames = $this->mappings->getDbNames();

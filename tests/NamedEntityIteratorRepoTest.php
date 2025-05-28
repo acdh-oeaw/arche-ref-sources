@@ -30,7 +30,7 @@ use PDO;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\Schema;
 use acdhOeaw\arche\lib\ingest\MetadataCollection;
-use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
+use acdhOeaw\arche\refSources\NamedEntityIteratorRepo as NEIR;
 
 /**
  * Description of NamedEntityIteratorRepoTest
@@ -68,17 +68,17 @@ class NamedEntityIteratorRepoTest extends \PHPUnit\Framework\TestCase {
         $mc->import($repo->getBaseUrl(), MetadataCollection::CREATE);
         $repo->commit();
 
-        $iter = new NamedEntityIteratorRepo($repo);
+        $iter = new NEIR($repo);
 
-        $iter->setFilter(class: $schema->classes->person);
+        $iter->setFilter([[NEIR::FILTER_CLASS, $schema->classes->person]]);
         $iter->getNamedEntities()->current();
         $this->assertEquals(18, $iter->count());
 
-        $iter->setFilter(class: $schema->classes->place);
+        $iter->setFilter([[NEIR::FILTER_CLASS, $schema->classes->place]]);
         $iter->getNamedEntities()->current();
         $this->assertEquals(1, $iter->count());
 
-        $iter->setFilter(class: $schema->classes->person, limit: 3);
+        $iter->setFilter([[NEIR::FILTER_CLASS, $schema->classes->person]], limit: 3);
         $n = 0;
         foreach ($iter->getNamedEntities() as $i) {
             $n++;
@@ -86,15 +86,27 @@ class NamedEntityIteratorRepoTest extends \PHPUnit\Framework\TestCase {
         $this->assertEquals(3, $iter->count());
         $this->assertEquals(3, $n);
 
-        $iter->setFilter(class: $schema->classes->person, idMatch: 'stuhec', limit: 30);
+        $filters = [
+            [NEIR::FILTER_CLASS, $schema->classes->person],
+            [NEIR::FILTER_ID, 'stuhec'],
+        ];
+        $iter->setFilter($filters, limit: 30);
         $iter->getNamedEntities()->current();
         $this->assertEquals(1, $iter->count());
-        
-        $iter->setFilter(class: $schema->classes->person, minModDate: date('Y-m-d H:i:s', time() + 1));
+
+        $filters = [
+            [NEIR::FILTER_CLASS, $schema->classes->person],
+            [NEIR::FILTER_MIN_MOD_DATE, date('Y-m-d H:i:s', time() + 1)],
+        ];
+        $iter->setFilter($filters);
         $iter->getNamedEntities()->current();
         $this->assertEquals(0, $iter->count());
-        
-        $iter->setFilter(class: $schema->classes->person, minModDate: date('Y-m-d H:i:s', time() - 10), limit: 5);
+
+        $filters = [
+            [NEIR::FILTER_CLASS, $schema->classes->person],
+            [NEIR::FILTER_MIN_MOD_DATE, date('Y-m-d H:i:s', time() - 10)],
+        ];
+        $iter->setFilter($filters, limit: 5);
         $iter->getNamedEntities()->current();
         $this->assertEquals(5, $iter->count());
     }

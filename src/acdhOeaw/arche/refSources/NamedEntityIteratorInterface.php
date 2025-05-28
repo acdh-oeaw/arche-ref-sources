@@ -34,8 +34,17 @@ use Generator;
  */
 interface NamedEntityIteratorInterface extends \Countable {
 
-    public function setFilter(?string $class = null, ?string $idMatch = null,
-                              ?string $minModDate = null, ?int $limit = null): void;
+    const FILTER_CLASS        = 'class';
+    const FILTER_ID           = 'id';
+    const FILTER_MIN_MOD_DATE = 'minModDate';
+    const FILTER_NO_PROPERTY  = 'noProperty';
+
+    /**
+     * 
+     * @param array<array{string, scalar}> $filters
+     * @return void
+     */
+    public function setFilter(array $filters, int | null $limit = null): void;
 
     /**
      * 

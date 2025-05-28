@@ -80,7 +80,6 @@ referenceSources:
   # wikidata is evil
   wikidata:
     http://www.wikidata.org/entity/Q200250: *wikidataPlace
-    http://www.wikidata.org/entity/Q200250: *wikidataPlace
     http://www.wikidata.org/entity/Q515: *wikidataPlace
     http://www.wikidata.org/entity/Q7930989: *wikidataPlace
     http://www.wikidata.org/entity/Q124250988: *wikidataPlace

@@ -28,21 +28,19 @@
 use Psr\Log\LogLevel;
 use zozlak\argparse\ArgumentParser as AP;
 use zozlak\logging\Log;
+use zozlak\RdfConstants as RDF;
 use quickRdf\DataFactory as DF;
 use quickRdf\Dataset;
 use quickRdf\DatasetNode;
 use quickRdfIo\Util as RdfIoUtil;
-use acdhOeaw\UriNormalizer;
+use termTemplates\PredicateTemplate as PT;
 use acdhOeaw\UriNormRules;
-use acdhOeaw\UriNormalizerRule;
-use acdhOeaw\UriNormalizerCache;
-use acdhOeaw\UriNormalizerException;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\refSources\Crawler;
 use acdhOeaw\arche\refSources\Merger;
 use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
 use acdhOeaw\arche\refSources\NamedEntityIteratorRepo;
-use acdhOeaw\arche\refSources\NamedEntityIteratorInterface;
+use acdhOeaw\arche\refSources\NamedEntityIteratorInterface as NEII;
 
 $incDir = __DIR__;
 while ($incDir !== '/' && !file_exists($incDir . '/vendor/autoload.php')) {
@@ -65,6 +63,8 @@ $parser      = new AP(epilog: "Enriches metadata by fetching additional informat
 $parser->addArgument('--limit', type: AP::TYPE_INT, default: PHP_INT_MAX, help: 'limit number of processed resources');
 $parser->addArgument('--after', help: 'process only resources modified after a given date');
 $parser->addArgument('--afterFile', help: 'process only resources modified after a date stored in a given file and updates the file content at the end');
+$parser->addArgument('--class', help: 'process only resources of a given class');
+$parser->addArgument('--withoutProperty', help: 'process resources missing a given property');
 $parser->addArgument('--id', help: 'process only resource with a given id');
 $parser->addArgument('--extDbName', help: 'process only resource from a given external authority file');
 $parser->addArgument('--repositoryUrl', help: 'use a given repository instance (overwrites the `repositoryUrl` property read from the config file)');
@@ -89,7 +89,7 @@ if ($param->verbose) {
 }
 
 // Configuration initialization
-$cfg = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
+$cfg        = json_decode(json_encode(yaml_parse_file($param->cfgFile)));
 // Repo object initialization
 $guzzleOpts = [
     'auth' => [
@@ -105,13 +105,23 @@ if (!empty($param->output) && $param->mode >= MODE_PARSE) {
 }
 
 // Crawl
-/* @var $source NamedEntityIteratorInterface */
+/* @var $source NEII */
 if (!empty($param->inputFile)) {
     $source = new NamedEntityIteratorFile($param->inputFile, $repo->getSchema());
 } else {
     $source = new NamedEntityIteratorRepo($repo);
 }
-$dateFilter = !empty($param->after) ? $param->after : '';
+$filters = [];
+if (!empty($param->after)) {
+    $filters[] = [NEII::FILTER_MIN_MOD_DATE, $param->after];
+}
+if (!empty($param->class)) {
+    $filters[] = [NEII::FILTER_CLASS, $param->class];
+}
+if (!empty($param->withoutProperty)) {
+    $filters[] = [NEII::FILTER_NO_PROPERTY, $param->withoutProperty];
+}
+$idFilters = [];
 if (!empty($param->id)) {
     $idFilters = ["^$param->id$"];
 } elseif (!empty($param->extDbName)) {
@@ -119,17 +129,26 @@ if (!empty($param->id)) {
     $idFilters = array_map(fn($x) => $x->match, $idFilters);
 } else {
     $idFilters = UriNormRules::getRules(array_keys(get_object_vars($cfg->referenceSources)));
+    $idSources = array_keys(get_object_vars($cfg->referenceSources));
+    $idFilters = array_filter($idFilters, fn($x) => in_array($x->name, $idSources));
+    usort($idFilters, fn($x) => array_search($x->name, $idSources));
     $idFilters = array_map(fn($x) => $x->match, $idFilters);
 }
 
-$limit   = $param->limit;
-$data    = new Dataset();
-$crawler = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
+$classTmpl = new PT(DF::namedNode(RDF::RDF_TYPE));
+$limit     = $param->limit;
+$data      = new Dataset();
+$crawler   = new Crawler($cfg->referenceSources, $repo->getSchema(), $log);
 foreach ($idFilters as $idFilter) {
-    $source->setFilter(null, $idFilter, $dateFilter, $limit);
+    $filtersTmp = array_merge($filters, [[NEII::FILTER_ID, $idFilter]]);
+    $source->setFilter($filtersTmp, $limit);
     $log->info("### idFilter: $idFilter");
     foreach ($crawler->crawl($source) as $entityData) {
         /** @var acdhOeaw\arche\refSources\ProcessEntityResult $entityData */
+        if ($entityData->newData->none($classTmpl)) {
+            $log->info("    resource of another class - skipping");
+            continue;
+        }
         $diff = $entityData->newData->copyExcept($entityData->oldData);
         if (count($diff) > 0) {
             $log->debug("    new data fetched:\n      " . trim(str_replace("\n", "\n      ", (string) $diff)));

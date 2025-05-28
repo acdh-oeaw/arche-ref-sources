@@ -26,9 +26,10 @@
 
 namespace acdhOeaw\arche\refSources;
 
+use BadMethodCallException;
 use quickRdf\Dataset;
 use quickRdf\DatasetNode;
-use quickRdf\DataFactory;
+use quickRdf\DataFactory as DF;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\PredicateTemplate as PT;
 use termTemplates\ValueTemplate as VT;
@@ -48,7 +49,7 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
 
     /**
      * 
-     * @var array<\termTemplates\QuadTemplate>
+     * @var array<array{string, \termTemplates\QuadTemplate}>
      */
     private array $filters = [];
     private ?int $limit    = null;
@@ -67,21 +68,25 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
     public function __construct(mixed $rdfFilePath, Schema $schema,
                                 string | null $format = null) {
         $this->graph  = new Dataset();
-        $this->graph->add(RdfIoUtil::parse($rdfFilePath, new DataFactory(), $format));
+        $this->graph->add(RdfIoUtil::parse($rdfFilePath, new DF(), $format));
         $this->schema = $schema;
     }
 
-    public function setFilter(?string $class = null, ?string $idMatch = null,
-                              ?string $minModDate = null, ?int $limit = null): void {
+    /**
+     * 
+     * @param array<array{string, scalar}> $filters
+     * @return void
+     */
+    public function setFilter(array $filters, int | null $limit = null): void {
         $this->filters = [];
-        if (!empty($class)) {
-            $this->filters[] = new PT(DataFactory::namedNode(RDF::RDF_TYPE), DataFactory::namedNode($class));
-        }
-        if (!empty($idMatch)) {
-            $this->filters[] = new PT($this->schema->id, new VT("`$idMatch`", VT::REGEX));
-        }
-        if (!empty($minModDate)) {
-            $this->filters[] = new PT($this->schema->modificationDate, new VT($minModDate, VT::GREATER_EQUAL));
+        foreach ($filters as $filter) {
+            $this->filters[] = match ($filter[0]) {
+                self::FILTER_CLASS => ['any', new PT(DF::namedNode(RDF::RDF_TYPE), DF::namedNode($filter[1]))],
+                self::FILTER_ID => ['any', new PT($this->schema->id, new VT("`" . $filter[1] . "`", VT::REGEX))],
+                self::FILTER_MIN_MOD_DATE => ['any', new PT($this->schema->modificationDate, new VT($filter[1], VT::GREATER_EQUAL))],
+                self::FILTER_NO_PROPERTY => ['none', new PT(DF::namedNode($filter[1]))],
+                default => throw new \BadMethodCallException("Unsupported filter type " . $filter[0]),
+            };
         }
         $this->limit = $limit;
         unset($this->matching);
@@ -115,8 +120,9 @@ class NamedEntityIteratorFile implements NamedEntityIteratorInterface {
         foreach ($this->graph->listSubjects() as $sbj) {
             $tmp     = $this->graph->copy(new QT($sbj));
             $matches = true;
-            foreach ($this->filters as $f) {
-                $matches &= $tmp->any($f);
+            foreach ($this->filters as $filter) {
+                $func = $filter[0];
+                $matches &= $tmp->$func($filter[1]);
             }
             if ($matches) {
                 $this->matching[] = $sbj;

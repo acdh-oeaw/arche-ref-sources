@@ -27,7 +27,7 @@
 namespace acdhOeaw\arche\refSources\tests;
 
 use acdhOeaw\arche\lib\Schema;
-use acdhOeaw\arche\refSources\NamedEntityIteratorFile;
+use acdhOeaw\arche\refSources\NamedEntityIteratorFile as NEIF;
 
 /**
  * Description of NamedEntityIteratorFileTest
@@ -43,26 +43,31 @@ class NamedEntityIteratorFileTest extends \PHPUnit\Framework\TestCase {
 
     public function testFilter(): void {
         $schema = new Schema(self::SCHEMA);
-        $iter   = new NamedEntityIteratorFile(__DIR__ . '/data/iteratorFile.ttl', $schema, 'text/turtle');
+        $iter   = new NEIF(__DIR__ . '/data/iteratorFile.ttl', $schema, 'text/turtle');
 
         $this->assertEquals(6, $iter->count());
 
-        $iter->setFilter(class: 'http://person');
+        $iter->setFilter([[NEIF::FILTER_CLASS, 'http://person']]);
         $this->assertCount(3, $iter);
 
-        $iter->setFilter(class: 'http://person', limit: 2);
+        $iter->setFilter([[NEIF::FILTER_CLASS, 'http://person']], limit: 2);
         $this->assertCount(2, $iter);
 
-        $iter->setFilter(idMatch: '2$');
+        $iter->setFilter([[NEIF::FILTER_ID, '2$']]);
         $this->assertCount(2, $iter);
 
-        $iter->setFilter(minModDate: '2024-10-05T12:34:56');
+        $iter->setFilter([[NEIF::FILTER_MIN_MOD_DATE, '2024-10-05T12:34:56']]);
         $this->assertCount(2, $iter);
 
-        $iter->setFilter('http://person', '[23]$', '2024-09-10T00:00:00', 100);
+        $filters = [
+            [NEIF::FILTER_CLASS, 'http://person'],
+            [NEIF::FILTER_ID, '[23]$'],
+            [NEIF::FILTER_MIN_MOD_DATE, '2024-09-10T00:00:00'],
+        ];
+        $iter->setFilter($filters, 100);
         $this->assertCount(1, $iter);
 
-        $iter->setFilter(class: 'http://other');
+        $iter->setFilter([[NEIF::FILTER_CLASS, 'http://other']]);
         $this->assertCount(0, $iter);
     }
 }
