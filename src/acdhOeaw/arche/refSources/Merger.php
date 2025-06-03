@@ -39,6 +39,7 @@ use acdhOeaw\arche\lib\SearchConfig;
 use acdhOeaw\arche\lib\Repo;
 use acdhOeaw\arche\lib\RepoResource;
 use acdhOeaw\arche\lib\exception\RepoLibException;
+use acdhOeaw\arche\lib\exception\Conflict;
 use termTemplates\QuadTemplate as QT;
 use termTemplates\PredicateTemplate as PT;
 
@@ -162,7 +163,11 @@ class Merger {
                 $this->log?->error("Failed to update $sbj with: " . print_r($e, true));
             } finally {
                 if ($this->repo->inTransaction()) {
-                    $this->repo->rollback();
+                    try {
+                        $this->repo->rollback();
+                    } catch (Conflict $e) {
+                        
+                    }
                 }
             }
         }
