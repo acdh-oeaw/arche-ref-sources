@@ -8,7 +8,7 @@
                                 <https://d-nb.info/gnd/4070561-4>,
                                 <http://viaf.org/viaf/126584224>,
                                 <https://isni.org/isni/0000000121090680>,
-                                <https://id.loc.gov/rwo/agents/n50056014>,
+                                <http://id.loc.gov/rwo/agents/n50056014>,
                                 <http://www.wikidata.org/entity/Q95569>;
     acdh:hasTitle               "Kunsthistorisches Museum Wien"@und;
     acdh:hasUrl                 "https://www.khm.at/";
