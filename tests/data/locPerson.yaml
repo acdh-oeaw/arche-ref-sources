@@ -1,0 +1,15 @@
+referenceSources:
+  loc-rwo-agents:
+    http://www.loc.gov/mads/rdf/v1#RWO: # same for Places, Persons and Organisations!
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Person
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 1
+      path:
+      - http://www.w3.org/2000/01/rdf-schema#label

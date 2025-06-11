@@ -1,0 +1,6 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://id.loc.gov/rwo/agents/n84007743>
+    a                           acdh:Organisation;
+    acdh:hasIdentifier          <http://id.loc.gov/rwo/agents/n84007743>;
+    acdh:hasTitle               "Österreichische Akademie der Wissenschaften. Phonogrammarchiv"@und.

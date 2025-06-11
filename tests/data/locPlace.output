@@ -1,0 +1,6 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://id.loc.gov/rwo/agents/n80024459>
+    a                           acdh:Place;
+    acdh:hasIdentifier          <http://id.loc.gov/rwo/agents/n80024459>;
+    acdh:hasTitle               "Kerkyra (Greece)"@und.

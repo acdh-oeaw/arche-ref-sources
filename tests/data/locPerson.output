@@ -1,0 +1,6 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<http://id.loc.gov/rwo/agents/no2002059410>
+    a                           acdh:Person;
+    acdh:hasIdentifier          <http://id.loc.gov/rwo/agents/no2002059410>;
+    acdh:hasTitle               "Uhl, Friedrich, 1825-1906"@und.

@@ -121,6 +121,18 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $this->runTestFromData('isniPlace');
     }
 
+    public function testLocPerson(): void {
+        $this->runTestFromData('locPerson');
+    }
+
+    public function testLocOrganisation(): void {
+        $this->runTestFromData('locOrganisation');
+    }
+
+    public function testLocPlace(): void {
+        $this->runTestFromData('locPlace');
+    }
+
     public function testCrawlingOrder(): void {
         $this->runTestFromData('crawlingOrder');
     }
