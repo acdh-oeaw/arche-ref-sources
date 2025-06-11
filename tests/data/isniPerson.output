@@ -1,0 +1,12 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://isni.org/isni/0000000122810221>
+    a                           acdh:Person;
+    acdh:hasIdentifier          <https://isni.org/isni/0000000122810221>,
+                                <http://www.wikidata.org/entity/Q15630735>;
+    acdh:hasTitle               "Muncker, Franz"@und,
+                                "Franz Muncker"@und,
+                                "Muncker, F."@und,
+                                "Munker, Franz"@und,
+                                "Мункер, Франц"@und.
+

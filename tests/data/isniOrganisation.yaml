@@ -1,0 +1,16 @@
+referenceSources:
+  isni:
+    http://schema.org/Organization:
+    - property: http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+      action: if missing
+      value: https://vocabs.acdh.oeaw.ac.at/schema#Organisation
+      type: resource
+    - property: https://vocabs.acdh.oeaw.ac.at/schema#hasTitle
+      action: if missing
+      type: literal
+      langProcess: overwrite
+      langValue: und
+      maxPerLang: 10
+      path:
+      # under rdfs:label ISNI reports the ISNI id (lol)
+      - http://schema.org/alternateName

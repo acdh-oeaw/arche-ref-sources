@@ -1,0 +1,11 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://isni.org/isni/0000000121893141>
+    a                           acdh:Place;
+    acdh:hasIdentifier          <https://isni.org/isni/0000000121893141>;
+    acdh:hasTitle               "München (Allemagne)"@und,
+                                "Munich"@und,
+                                "Munich (Allemagne)"@und,
+                                "Munich (Germany)"@und,
+                                "Munchen"@und,
+                                "München (Germany)"@und.

@@ -1,0 +1,15 @@
+@prefix acdh: <https://vocabs.acdh.oeaw.ac.at/schema#> .
+
+<https://isni.org/isni/000000012207878X>
+    a                           acdh:Organisation;
+    acdh:hasIdentifier          <https://isni.org/isni/000000012207878X>;
+    acdh:hasTitle               "Österreichische Akademie der Wissenschaften Wien Phonogrammarchivs-Kommission"@und,
+                                "Österreichische Akademie der Wissenschaften Phonogrammarchiv"@und,
+                                "Phonogrammarchiv (Wien)"@und,
+                                "Phonogrammarchiv Wien"@und,
+                                "Phonogrammarchivs-Kommission (Wien)"@und,
+                                "Phonogrammarchivs-Kommission Wien"@und,
+                                "Österreichische Akademie der Wissenschaften Wien Phonogrammarchiv"@und,
+                                "Österreichische Akademie der Wissenschaften Phonogrammarchivs-Kommission"@und.
+
+
