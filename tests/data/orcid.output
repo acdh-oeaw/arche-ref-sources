@@ -6,5 +6,6 @@
     acdh:hasTitle               "Dr. Ing. Mathias Mehofer"@und;
     acdh:hasFirstName           "Dr. Ing. Mathias"@und;
     acdh:hasLastName            "Mehofer"@und;
-    acdh:hasUrl                 "http://www.univie.ac.at/vias/archaeometallurgie.html",
-                                "http://univie.academia.edu/MathiasMehofer".
+    acdh:hasUrl                 "https://materialsscience.univie.ac.at/",
+                                "https://homepage.univie.ac.at/mathias.mehofer/".
+

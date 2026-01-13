@@ -85,9 +85,10 @@ class CrawlerTest extends \PHPUnit\Framework\TestCase {
         $this->runTestFromData('gazetteer');
     }
 
-    public function testPleiades(): void {
-        $this->runTestFromData('pleiades');
-    }
+    /* commented out because Pleiades introduced an anti-bot wall */
+    //public function testPleiades(): void {
+    //    $this->runTestFromData('pleiades');
+    //}
 
     public function testGetty(): void {
         $this->runTestFromData('getty');

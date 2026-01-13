@@ -28,6 +28,7 @@ namespace acdhOeaw\arche\refSources;
 
 use Generator;
 use Psr\Log\LoggerInterface;
+use zozlak\ProxyClient;
 use rdfInterface\DatasetInterface;
 use rdfInterface\DatasetNodeInterface;
 use quickRdfIo\RdfIoException;
@@ -51,8 +52,11 @@ class Crawler {
 
     public function __construct(object $refSrcsCfg, Schema $schema,
                                 LoggerInterface | null $log = null) {
+        $client           = ProxyClient::factory([
+            'headers'=> ['user-agent' => 'arche-crawler/1.0'],
+        ]);
         $this->schema     = $schema;
-        $this->normalizer = new UriNormalizer(idProp: $schema->id, cache: new UriNormalizerCache());
+        $this->normalizer = new UriNormalizer(client: $client, idProp: $schema->id, cache: new UriNormalizerCache());
         $this->mappings   = new PropertyMappings($this->normalizer, $schema->id);
         $this->mappings->parseConfig($refSrcsCfg);
         $this->log        = $log;
