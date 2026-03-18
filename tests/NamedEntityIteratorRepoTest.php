@@ -55,6 +55,8 @@ class NamedEntityIteratorRepoTest extends \PHPUnit\Framework\TestCase {
 
     public function tearDown(): void {
         parent::tearDown();
+        $query = self::$pdo->prepare("DELETE FROM relations WHERE target_id > ?");
+        $query->execute([$this->resIdMax]);
         $query = self::$pdo->prepare("DELETE FROM resources WHERE id > ?");
         $query->execute([$this->resIdMax]);
     }
