@@ -26,7 +26,7 @@
 
 namespace acdhOeaw\arche\refSources;
 
-use acdhOeaw\UriNormalizer;
+use acdhOeaw\uriNormalizer\UriNormalizer;
 use rdfInterface\DatasetNodeInterface;
 
 /**

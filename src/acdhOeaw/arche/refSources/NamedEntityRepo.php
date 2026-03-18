@@ -27,8 +27,8 @@
 namespace acdhOeaw\arche\refSources;
 
 use termTemplates\PredicateTemplate as PT;
-use acdhOeaw\UriNormalizer;
-use acdhOeaw\UriNormalizerException;
+use acdhOeaw\uriNormalizer\UriNormalizer;
+use acdhOeaw\uriNormalizer\UriNormalizerException;
 use acdhOeaw\arche\lib\RepoInterface;
 use acdhOeaw\arche\lib\RepoResource;
 use rdfInterface\DatasetNodeInterface;

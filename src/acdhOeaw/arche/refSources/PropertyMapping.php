@@ -36,8 +36,8 @@ use rdfInterface\DatasetNodeInterface;
 use quickRdf\Dataset;
 use quickRdf\DataFactory as DF;
 use termTemplates\QuadTemplate as QT;
-use acdhOeaw\UriNormalizer;
-use acdhOeaw\UriNormalizerException;
+use acdhOeaw\uriNormalizer\UriNormalizer;
+use acdhOeaw\uriNormalizer\UriNormalizerException;
 
 /**
  * Defines a single target ARCHE property mapping

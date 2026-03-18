@@ -32,9 +32,9 @@ use zozlak\ProxyClient;
 use rdfInterface\DatasetInterface;
 use rdfInterface\DatasetNodeInterface;
 use quickRdfIo\RdfIoException;
-use acdhOeaw\UriNormalizer;
-use acdhOeaw\UriNormalizerCache;
-use acdhOeaw\UriNormalizerException;
+use acdhOeaw\uriNormalizer\UriNormalizer;
+use acdhOeaw\uriNormalizer\UriNormalizerCache;
+use acdhOeaw\uriNormalizer\UriNormalizerException;
 use acdhOeaw\arche\lib\Schema;
 
 /**
