@@ -37,17 +37,7 @@ Remarks (substitute `{arche-ref-source}` according to the instruction above):
 
 ---
 
-## Instructions for repo-ingestion@hephaistos.arz.oeaw.ac.at
+# Deployment
 
-The script is already installed on repo-ingestion@hephaistos.arz.oeaw.ac.at
-
-* ssh to repo-ingestion@hephaistos
-* run `./login.sh`
-* run `/ARCHE/vendor/bin/arche-ref-sources {parameters} {pathToConfigFile}` and replace the part in `{}` with your choice of parameters
-  * Example 1: fetch data without changing what is there for resources modified after 01.12.2021, output on console what has been fetched and also write this output to a file: 
-     * `/ARCHE/vendor/bin/arche-ref-sources --mode parse --verbose --output /ARCHE/staging/enrichment/outputEnrich.ttl --after 2021-12-01 /ARCHE/vendor/acdh-oeaw/arche-ref-sources/config-sample.yaml`
-  * Example 2, not for the faint of heart: fetch data and change on instance, but immediately revert changes; also output on console what has been fetched and  write this output to a file as well: 
-     * `/ARCHE/vendor/bin/arche-ref-sources --mode test --verbose --output /ARCHE/staging/enrichment/outputEnrich.ttl /ARCHE/vendor/acdh-oeaw/arche-ref-sources/config-sample.yaml` 
-  * If you want to use your own config file, make a copy of /ARCHE/vendor/acdh-oeaw/arche-ref-sources/config-sample.yaml (`cp /ARCHE/vendor/acdh-oeaw/arche-ref-sources/config-sample.yaml {placeOfYourChoice`) and edit it.
-
+The script is deployed to run by cron on the ARCHE VM for ARCHE curation and production instances.
 
